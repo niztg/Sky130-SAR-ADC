@@ -71,15 +71,13 @@ def format_si(value, unit):
             return f"{value / factor:.2f} {prefix}{unit}"
     return f"{value:.2e} {unit}"
 
-def monte_carlo_plot(max_inl, bin_no):
+def monte_carlo_plot(max_inl, bin_no, yield_pct):
     plt.hist(max_inl, bin_no, edgecolor='black')
 
     plt.xlabel('Max INL')
     plt.ylabel('Amount of trials')
 
     plt.axvline(x=0.5, color='red', linestyle='--', label='0.5 LSB threshold')
-
-    yield_pct = 100 * np.sum(np.array(max_inl) < 0.5) / len(max_inl)
     plt.title(f'Max INL Distribution — Yield: {yield_pct:.1f}%')
 
     plt.show()

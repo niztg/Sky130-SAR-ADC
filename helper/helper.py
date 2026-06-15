@@ -13,13 +13,12 @@ def find_minimum_capacitance(N, V_ref, T):
     C_min = (k * T) / ((V_lsb / 2) ** 2)
     return C_min
 
-def perturb_capacitors(mismatch_std, N, C_unit):
+def perturb_capacitors(mismatch_std, N, C_unit, C_min_unit):
     weights = [2**(N-1-i) for i in range(N)] + [1]
-    
     for i, w in enumerate(weights):
-        random_error = np.random.normal(0, mismatch_std / np.sqrt(w))
-        weights[i] = w * C_unit * (1 + random_error) 
-
+        n_cells = w * C_unit / C_min_unit  # total unit cells in this cap
+        random_error = np.random.normal(0, mismatch_std / np.sqrt(n_cells))
+        weights[i] = w * C_unit * (1 + random_error)
     return weights
 
 def sar_convert_vectorized(V_in_array, cap_weights, V_ref, N):
@@ -49,10 +48,10 @@ def compute_dnl_inl(cap_weights, V_ref, N):
 
     return DNL, INL
         
-def monte_carlo_simulation(N_trials, mismatch_std, N, C_unit, V_ref):
+def monte_carlo_simulation(N_trials, mismatch_std, N, C_unit, V_ref, C_min_unit):
     max_inl = []
     for i in range(N_trials):
-        weights = perturb_capacitors(mismatch_std, N, C_unit)
+        weights = perturb_capacitors(mismatch_std, N, C_unit, C_min_unit)
         dnl, inl = compute_dnl_inl(weights, V_ref, N)
         max_inl.append(np.max(abs(inl)))
     
@@ -89,11 +88,11 @@ def compute_yield(max_inl):
     return 100 * np.mean(np.array(max_inl) < 0.5)
 
 def C_unit_array(C_min):
-    return np.linspace(C_min, C_min * 100, 20)
+    return np.linspace(C_min * 3, C_min * 6, 20) 
 
-def yield_vs_cap_data(C_unit, N_trials, mismatch_std, N, V_ref):
+def yield_vs_cap_data(C_unit, N_trials, mismatch_std, N, V_ref, C_min_unit):
     return [
-        compute_yield(monte_carlo_simulation(N_trials, mismatch_std, N, c, V_ref))
+        compute_yield(monte_carlo_simulation(N_trials, mismatch_std, N, c, V_ref, C_min_unit))
         for c in C_unit
     ]
 

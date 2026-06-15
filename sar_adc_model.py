@@ -21,9 +21,10 @@ if __name__ == "__main__":
         C_unit,
         yield_vs_cap_data(
             C_unit,
-            500,
+            2000,
             0.02,
             N,
-            V_ref
+            V_ref,
+            C_min
         )
     )

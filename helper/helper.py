@@ -84,3 +84,25 @@ def monte_carlo_plot(max_inl, bin_no):
     plt.title(f'Max INL Distribution — Yield: {yield_pct:.1f}%')
 
     plt.show()
+
+def compute_yield(max_inl):
+    return 100 * np.mean(np.array(max_inl) < 0.5)
+
+def C_unit_array(C_min):
+    return np.linspace(C_min, C_min * 100, 20)
+
+def yield_vs_cap_data(C_unit, N_trials, mismatch_std, N, V_ref):
+    return [
+        compute_yield(monte_carlo_simulation(N_trials, mismatch_std, N, c, V_ref))
+        for c in C_unit
+    ]
+
+def yield_vs_capacitance_plot(C_unit, yield_data):
+    plt.plot(np.array(C_unit) * 1e15, yield_data)
+    plt.axhline(y=99, color='red', linestyle='--', label='99% yield target')
+    plt.xlabel('C_unit (fF)')
+    plt.ylabel('Yield (%)')
+    plt.title('Yield vs Unit Capacitance')
+    plt.legend()
+    plt.grid()
+    plt.show()

@@ -13,5 +13,17 @@ if __name__ == "__main__":
     print(f"V_lsb/2 (max noise sigma): {format_si(V_ref / 2**(N+1), 'V')}")
     print(f"Minimum C_total from kT/C: {format_si(C_min, 'F')}")
 
-    max_inl = monte_carlo_simulation(N_trials, 0.01, N, C_min, V_ref)
-    monte_carlo_plot(max_inl, 40)
+    # max_inl = monte_carlo_simulation(N_trials, 0.01, N, C_min, V_ref)
+    # monte_carlo_plot(max_inl, 40, compute_yield(max_inl))
+
+    C_unit = C_unit_array(C_min)
+    yield_vs_capacitance_plot(
+        C_unit,
+        yield_vs_cap_data(
+            C_unit,
+            500,
+            0.02,
+            N,
+            V_ref
+        )
+    )

@@ -117,32 +117,32 @@ X113 rst 114 sky130_fd_sc_hd__clkinv_1
 X114 rst 115 sky130_fd_sc_hd__clkinv_1
 X115 rst 116 sky130_fd_sc_hd__clkinv_1
 X116 rst 117 sky130_fd_sc_hd__clkinv_1
-X117 93 bit_idx.1 90 clk sky130_fd_sc_hd__dfrtp_1
-X118 106 bit_idx.3 69 clk sky130_fd_sc_hd__dfstp_2
-X119 112 result.9 44 clk sky130_fd_sc_hd__dfrtp_1
-X120 105 cdac_sw.8 73 clk sky130_fd_sc_hd__dfrtp_1
-X121 115 cdac_sw.2 32 clk sky130_fd_sc_hd__dfrtp_1
-X122 104 result.0 74 clk sky130_fd_sc_hd__dfrtp_1
-X123 103 active 67 clk sky130_fd_sc_hd__dfrtp_1
-X124 111 cdac_sw.4 50 clk sky130_fd_sc_hd__dfrtp_1
-X125 102 result.1 76 clk sky130_fd_sc_hd__dfrtp_1
-X126 5 bit_idx.2 92 clk sky130_fd_sc_hd__dfrtp_1
-X127 101 result.2 78 clk sky130_fd_sc_hd__dfrtp_1
-X128 110 cdac_sw.9 53 clk sky130_fd_sc_hd__dfrtp_1
-X129 100 result.3 79 clk sky130_fd_sc_hd__dfrtp_1
-X130 114 done 34 clk sky130_fd_sc_hd__dfrtp_1
-X131 99 result.4 80 clk sky130_fd_sc_hd__dfrtp_1
-X132 109 cdac_sw.5 57 clk sky130_fd_sc_hd__dfrtp_1
-X133 98 result.5 81 clk sky130_fd_sc_hd__dfrtp_1
-X134 116 cdac_sw.1 25 clk sky130_fd_sc_hd__dfrtp_1
-X135 97 result.6 82 clk sky130_fd_sc_hd__dfrtp_1
-X136 108 cdac_sw.6 62 clk sky130_fd_sc_hd__dfrtp_1
-X137 96 result.7 83 clk sky130_fd_sc_hd__dfrtp_1
-X138 113 cdac_sw.3 39 clk sky130_fd_sc_hd__dfrtp_1
-X139 95 result.8 85 clk sky130_fd_sc_hd__dfrtp_1
-X140 107 cdac_sw.7 66 clk sky130_fd_sc_hd__dfrtp_1
-X141 94 bit_idx.0 87 clk sky130_fd_sc_hd__dfstp_2
-X142 117 cdac_sw.0 19 clk sky130_fd_sc_hd__dfrtp_1
+X117 clkin 87 bit_idx.0 94 sky130_fd_sc_hd__dfstp_2
+X118 clkin 90 bit_idx.1 93 sky130_fd_sc_hd__dfrtp_1
+X119 clkin 92 bit_idx.2 5 sky130_fd_sc_hd__dfrtp_1
+X120 clkin 69 bit_idx.3 106 sky130_fd_sc_hd__dfstp_2
+X121 clkin 19 cdac_sw.0 117 sky130_fd_sc_hd__dfrtp_1
+X122 clkin 25 cdac_sw.1 116 sky130_fd_sc_hd__dfrtp_1
+X123 clkin 32 cdac_sw.2 115 sky130_fd_sc_hd__dfrtp_1
+X124 clkin 39 cdac_sw.3 113 sky130_fd_sc_hd__dfrtp_1
+X125 clkin 50 cdac_sw.4 111 sky130_fd_sc_hd__dfrtp_1
+X126 clkin 57 cdac_sw.5 109 sky130_fd_sc_hd__dfrtp_1
+X127 clkin 62 cdac_sw.6 108 sky130_fd_sc_hd__dfrtp_1
+X128 clkin 66 cdac_sw.7 107 sky130_fd_sc_hd__dfrtp_1
+X129 clkin 73 cdac_sw.8 105 sky130_fd_sc_hd__dfrtp_1
+X130 clkin 53 cdac_sw.9 110 sky130_fd_sc_hd__dfrtp_1
+X131 clkin 74 result.0 104 sky130_fd_sc_hd__dfrtp_1
+X132 clkin 76 result.1 102 sky130_fd_sc_hd__dfrtp_1
+X133 clkin 78 result.2 101 sky130_fd_sc_hd__dfrtp_1
+X134 clkin 79 result.3 100 sky130_fd_sc_hd__dfrtp_1
+X135 clkin 80 result.4 99 sky130_fd_sc_hd__dfrtp_1
+X136 clkin 81 result.5 98 sky130_fd_sc_hd__dfrtp_1
+X137 clkin 82 result.6 97 sky130_fd_sc_hd__dfrtp_1
+X138 clkin 83 result.7 96 sky130_fd_sc_hd__dfrtp_1
+X139 clkin 85 result.8 95 sky130_fd_sc_hd__dfrtp_1
+X140 clkin 44 result.9 112 sky130_fd_sc_hd__dfrtp_1
+X141 clkin 34 done 114 sky130_fd_sc_hd__dfrtp_1
+X142 clkin 67 active 103 sky130_fd_sc_hd__dfrtp_1
 V0 cdac_sw.0 118 DC 0
 V1 19 119 DC 0
 V2 cdac_sw.1 120 DC 0

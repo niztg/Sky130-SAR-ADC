@@ -1,0 +1,102 @@
+* 10-bit SAR ADC top-level testbench
+* Signal flow:
+*   vin → bootstrapped switch → vdac (CDAC top plate)
+*   SAR logic → cdac_sw[9:0] → CDAC bottom plates → vdac moves
+*   vdac → comparator VIN2, vref_half → VIN1
+*   comparator Y → DFF → comp_in → SAR logic
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.include "/Users/nizansari/Desktop/Projects/SAR ADC/sar_logic_fixed.spice"
+.include "/Users/nizansari/Desktop/Projects/SAR ADC/cdac.spice"
+
+* -------------------------
+* Subcircuit definitions
+* -------------------------
+
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ1 VDD net1 net3 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch
+
+.subckt strongarm_comparator VDD X Y CLK VIN2 VIN1
+XS1 P CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS3 X CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM5 X Y VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM6 Y X VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS4 Y CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS2 Q CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM4 Y X Q 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM3 X Y P 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM1 P VIN1 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM2 Q VIN2 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM7 net1 CLK 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends strongarm_comparator
+
+* -------------------------
+* Supply and stimulus
+* -------------------------
+
+Vvdd vdd 0 DC 1.8
+Vvref vref 0 DC 1.8
+Vvref_half vref_half 0 DC 0.9
+Vvin vin 0 DC 0.6
+
+* Clock: 100ns period = 10 MHz
+Vclk clk 0 PULSE(0 1.8 10n 1n 1n 49n 100n)
+
+* PHIBAR: inverted clock
+Vphibar phibar 0 PULSE(1.8 0 10n 1n 1n 49n 100n)
+
+* RST: brief high pulse at t=0
+Vrst rst 0 PULSE(0 1.8 0 1n 1n 10n 2000n)
+
+* START: pulse to begin conversion after reset
+Vstart start 0 PULSE(0 1.8 20n 1n 1n 150n 2000n)
+
+* -------------------------
+* Block instantiations
+* -------------------------
+
+* Bootstrapped switch
+Xbs vdd phibar vdac vin bootstrapped_switch
+
+* CDAC
+Xcdac vdac cdac_sw.9 cdac_sw.8 cdac_sw.7 cdac_sw.6 cdac_sw.5
++      cdac_sw.4 cdac_sw.3 cdac_sw.2 cdac_sw.1 cdac_sw.0
++      vref vdd 0 cdac
+
+* StrongARM comparator
+* VIN1=vref_half, VIN2=vdac
+* comp_y=1 when vref_half > vdac (vdac hasn't reached vref/2 yet → keep bit)
+* comp_y=0 when vdac > vref_half (overshot → clear bit)
+Xcmp vdd comp_x comp_y clk vdac vref_half strongarm_comparator
+
+* DFF
+Xdff clk comp_y 0 0 vdd vdd comp_in sky130_fd_sc_hd__dfxtp_1
+
+* SAR logic
+Xsar clk rst start comp_in
++     cdac_sw.9 cdac_sw.8 cdac_sw.7 cdac_sw.6 cdac_sw.5
++     cdac_sw.4 cdac_sw.3 cdac_sw.2 cdac_sw.1 cdac_sw.0
++     result.9 result.8 result.7 result.6 result.5
++     result.4 result.3 result.2 result.1 result.0
++     done vdd 0 sar_logic
+
+* -------------------------
+* Simulation
+* -------------------------
+
+.tran 100p 2u
+
+.probe v(vdac) v(comp_y) v(comp_in) v(clk) v(done)
+.probe v(cdac_sw.9) v(cdac_sw.8) v(cdac_sw.7) v(cdac_sw.6) v(cdac_sw.5)
+.probe v(cdac_sw.4) v(cdac_sw.3) v(cdac_sw.2) v(cdac_sw.1) v(cdac_sw.0)
+.probe v(result.9) v(result.8) v(result.7) v(result.6) v(result.5)
+.probe v(result.4) v(result.3) v(result.2) v(result.1) v(result.0)
+
+.end

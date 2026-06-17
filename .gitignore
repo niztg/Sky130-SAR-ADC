@@ -1,6 +1,16 @@
-*
-!README.md
+# ignore build artifacts and temp files
+*.xpm
+*.log
+*.png
+output.log
+
+# keep everything else
+!*.sch
+!*.spice
+!*.sym
+!*.py
+!*.md
 !.gitignore
-!sar_adc_model.py
 !helper/
 !helper/**
+!README.md

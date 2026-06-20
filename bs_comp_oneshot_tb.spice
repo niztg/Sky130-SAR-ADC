@@ -1,0 +1,124 @@
+* Isolation testbench: bootstrapped switch -> hold cap -> StrongARM comparator
+*
+* Purpose: verify these two ALREADY-VERIFIED blocks compose correctly when
+* driven by TRUE ONE-SHOT timing (not the free-running PULSE used in the
+* standalone bootstrapped_switch_tb.spice). This matters because a free-running
+* PHIBAR lets C_boot precharge across many prior cycles before the cycle under
+* test, which can mask a cold-start settling/gain error on the very first
+* pulse -- exactly the failure mode documented in this project's notes.
+*
+* No CDAC, no SAR logic. One sample, one strobe, done.
+*
+* Timing derivation (not arbitrary):
+*   - Measured 10-bit-accuracy settling time for this switch into the real
+*     CDAC's total capacitance (25.6pF = 1024 * 25fF unit cap) was measured
+*     directly in ngspice from bootstrapped_switch_tb.spice:
+*         meas tran t_settle_10bit when v(VOUT)=0.899121 rise=1
+*         -> t_settle_10bit = 156.8 ns
+*   - Sample window (PHIBAR low / phi_s high) = 300 ns, giving ~2x margin
+*     over the measured settling time.
+*   - Comparator strobe (CLK rising) = 500 ns, i.e. 200 ns after the sample
+*     window closes, so the held voltage has time to fully stabilize with
+*     PHIBAR already high (switch disconnected) before the comparator reads it.
+*   - Total .tran window = 1us, comfortably past strobe + comparator
+*     regeneration time.
+*
+* PHIBAR and CLK are each a SINGLE EDGE -- not periodic, not free-running.
+* This is the actual cold-start behavior the real ADC's phi_s/clk relationship
+* needs, as opposed to the repeating PULSE used in the standalone bootstrap
+* switch testbench (which is fine for THAT test's purpose, but is NOT
+* representative of the real one-shot sampling behavior).
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+* -------------------------
+* Bootstrapped switch (verified block, reused as-is)
+*   samples VIN onto VOUT while PHIBAR is LOW
+* -------------------------
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ1 VDD net1 net3 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch
+
+* -------------------------
+* StrongARM comparator (verified block, reused as-is)
+*   evaluates while CLK is HIGH, precharges X,Y high while CLK is LOW
+* -------------------------
+.subckt strongarm_comparator VDD X Y CLK VIN2 VIN1
+XS1 P CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS3 X CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM5 X Y VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM6 Y X VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS4 Y CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS2 Q CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM4 Y X Q 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM3 X Y P 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM1 P VIN1 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM2 Q VIN2 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM7 net1 CLK 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends strongarm_comparator
+
+* -------------------------
+* Supplies, references, and the device under test's input
+* -------------------------
+Vvdd vdd 0 DC 1.8
+Vvref_half vref_half 0 DC 0.9
+
+* Single fixed DC test value for this first pass. Pick a value clearly on
+* one side of vref_half (0.9V) so the expected comparator decision is
+* unambiguous. 1.2V is well above vref_half.
+Vvin vin 0 DC 1.2
+
+* -------------------------
+* Control signals -- BOTH ARE SINGLE EDGES, NOT PERIODIC.
+* -------------------------
+
+* PHIBAR: starts LOW (0V) at t=0 -- switch samples immediately.
+* Rises to 1.8V at t=300ns and STAYS there -- switch holds for the rest of
+* the run. PULSE() syntax requires a period; PER is set far beyond .tran stop
+* time (10us) so only the single rising edge at 300ns ever occurs.
+Vphibar phibar 0 PULSE(0 1.8 0 1n 1n 300n 10u)
+
+* CLK: starts LOW, single rising edge at t=500ns (200ns after PHIBAR's edge,
+* i.e. 200ns after the switch has disconnected and the held voltage has had
+* time to settle). Stays HIGH for the rest of the run -- comparator evaluates
+* once and holds its decision (X/Y do not return to precharge state since
+* CLK never falls again in this window).
+Vclk clk 0 PULSE(0 1.8 500n 1n 1n 10u 20u)
+
+* -------------------------
+* Block instantiations
+* -------------------------
+Xbs vdd phibar vout vin bootstrapped_switch
+
+* Hold capacitor sized to match total CDAC capacitance (1024 * 25fF = 25.6pF),
+* same value used in bootstrapped_switch_tb.spice, so this test loads the
+* switch the same way the real CDAC does.
+Chold vout 0 25.6p
+
+Xcmp vdd comp_x comp_y clk vout vref_half strongarm_comparator
+
+* -------------------------
+* Simulation
+* -------------------------
+.ic v(vout)=0
+
+.tran 100p 1u UIC
+
+.probe v(vin) v(phibar) v(vout) v(clk) v(comp_x) v(comp_y)
+
+* Sampled voltage just before PHIBAR's edge (end of sample window) --
+* checks the switch's accuracy independent of the comparator.
+.meas tran vout_sampled find v(vout) at=299n
+
+* Comparator decision well after the strobe, once it has fully regenerated.
+* expected for vin=1.2V > vref_half=0.9V: comp_x HIGH, comp_y LOW
+.meas tran comp_x_final find v(comp_x) at=900n
+.meas tran comp_y_final find v(comp_y) at=900n
+
+.end

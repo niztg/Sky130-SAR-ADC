@@ -8,6 +8,7 @@ output.log
 !*.sch
 !*.spice
 !*.sym
+
 !*.py
 !*.md
 !.gitignore

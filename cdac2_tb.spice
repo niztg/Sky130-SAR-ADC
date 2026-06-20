@@ -1,0 +1,86 @@
+* Testbench: 2-bit CDAC, one sample window, then step through all 4 codes
+* to check vdac against hand-calculated predictions.
+*
+* vin=0.6V, vcm=0.9V, vref=1.8V
+* Predicted vdac = vcm - vin + vref*D/4 = 0.3 + 0.45*D
+*   D=0 (00): vdac = 0.300
+*   D=1 (01): vdac = 0.750
+*   D=2 (10): vdac = 1.200
+*   D=3 (11): vdac = 1.650
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.include "cdac2.spice"
+
+* ============================================================
+* Bootstrapped sampling switch (verified block, reused as-is, pasted inline
+* per this project's existing convention rather than a separate include file)
+*   samples VIN onto VOUT while PHIBAR is LOW
+* ============================================================
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ1 VDD net1 net3 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch
+
+Vvdd vdd 0 DC 1.8
+Vvref vref 0 DC 1.8
+Vvcm vcm 0 DC 0.9
+Vvin vin 0 DC 0.6
+
+* phi_s: one-shot sample pulse, 300ns wide (per measured switch settling time)
+Vphi_s phi_s 0 PULSE(0 1.8 0 1n 1n 300n 10u)
+
+* cdac_sw1, cdac_sw0: held at 0 during sample, then stepped through all 4
+* codes, one per 500ns window, starting after the sample window closes.
+Vsw1 cdac_sw1 0 PWL(
++ 0     0
++ 599n  0
++ 600n  0
++ 1099n 0
++ 1100n 0
++ 1599n 0
++ 1600n 1
++ 2099n 1
++ 2100n 1
++ 2599n 1
++ )
+Vsw0 cdac_sw0 0 PWL(
++ 0     0
++ 599n  0
++ 600n  0
++ 1099n 0
++ 1100n 1
++ 1599n 1
++ 1600n 0
++ 2099n 0
++ 2100n 1
++ 2599n 1
++ )
+
+Xcdac vdac cdac_sw1 cdac_sw0 vref vdd gnd vin phi_s vcm cdac2
+
+.tran 100p 2.6u
+
+.probe v(vdac) v(phi_s) v(cdac_sw1) v(cdac_sw0) v(xcdac.bp1) v(xcdac.bp0)
+
+.meas tran vdac_after_sample find v(vdac) at=299n
+
+.meas tran vdac_00 find v(vdac) at=1050n
+.meas tran vdac_01 find v(vdac) at=1550n
+.meas tran vdac_10 find v(vdac) at=2050n
+.meas tran vdac_11 find v(vdac) at=2550n
+
+.meas tran bp1_00 find v(xcdac.bp1) at=1050n
+.meas tran bp0_00 find v(xcdac.bp0) at=1050n
+.meas tran bp1_01 find v(xcdac.bp1) at=1550n
+.meas tran bp0_01 find v(xcdac.bp0) at=1550n
+.meas tran bp1_10 find v(xcdac.bp1) at=2050n
+.meas tran bp0_10 find v(xcdac.bp0) at=2050n
+.meas tran bp1_11 find v(xcdac.bp1) at=2550n
+.meas tran bp0_11 find v(xcdac.bp0) at=2550n
+
+.end

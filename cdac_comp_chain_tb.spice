@@ -1,0 +1,158 @@
+* CDAC + StrongARM comparator, chained, SAR logic REMOVED.
+*
+* Purpose: the full ADC (CDAC + comparator + SAR logic) shows a -77 LSB
+* error at vin=1.2V, but CDAC alone (cold-start, isolated) shows only a
+* few mV of kick -- far too small to explain -77 LSB. The switch+comparator
+* combination was already verified working together. This testbench tests
+* the OTHER pairing -- CDAC + comparator together, SAR logic absent --
+* to narrow down whether the missing error is in this interface.
+*
+* Method: rather than running a live SAR search (which needs the real SAR
+* logic), drive a sequence of FIXED trial codes that match exactly what a
+* real 10-bit SAR search would try first, for vin=1.2V. Trial windows run
+* from t=1us to t=9us (1us delay added after an earlier run revealed vdac
+* floating/wandering during [0,100ns] with no active driver -- see timing
+* section below):
+*   trial 1 [1u-3u]: D=512 (1000000000) -> predicted vdac=0.600V -> expect KEEP (comp_y=1)
+*   trial 2 [3u-5u]: D=768 (1100000000) -> predicted vdac=1.050V -> expect CLEAR (comp_y=0)
+*   trial 3 [5u-7u]: D=640 (1010000000) -> predicted vdac=0.825V -> expect KEEP (comp_y=1)
+*   trial 4 [7u-9u]: D=704 (1011000000) -> predicted vdac=0.938V -> expect CLEAR (comp_y=0)
+* These are the IDEAL predictions from vdac = vcm-vin+vref*D/1024; checking
+* the comparator's actual decision against each tells us, bit by bit,
+* whether the CDAC+comparator combination is making correct decisions --
+* same diagnostic approach as the original sar_logic_only_tb.spice /
+* comparator_chain_tb.spice isolation testbenches earlier in this project.
+*
+* Timing: each trial code is held for a full 2us window, present from the
+* window's start. clkbar (driving the comparator's CLK) is LOW for the
+* first ~991ns of each window (precharge phase) and HIGH for the
+* remaining ~1009ns (evaluate phase) -- same precharge/evaluate split as
+* the real ADC's comparator strobe, just re-anchored to start at t=0 per
+* window since this testbench has no rst/start sequencing.
+*
+* vin=1.2V (matches the real full-ADC testbench run that showed -77 LSB).
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.include "cdac.spice"
+
+* ============================================================
+* StrongARM comparator (verified block, copied directly from sar_adc_tb.spice
+* to guarantee an exact match -- port order VDD X Y CLK VIN2 VIN1)
+* ============================================================
+.subckt strongarm_comparator VDD X Y CLK VIN2 VIN1
+XS1 P CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS3 X CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM5 X Y VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM6 Y X VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS4 Y CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS2 Q CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM4 Y X Q 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM3 X Y P 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM1 P VIN1 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM2 Q VIN2 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM7 net1 CLK 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends strongarm_comparator
+
+* ============================================================
+* Bootstrapped switch (used inside cdac.spice)
+* ============================================================
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ1 VDD net1 net3 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch
+
+* -------------------------
+* Supplies
+* -------------------------
+Vvdd vdd 0 DC 1.8
+Vvref vref 0 DC 1.8
+Vvcm vcm 0 DC 0.9
+Vvin vin 0 DC 1.2
+
+* -------------------------
+* Clocks -- 2us period, now starting at t=1us (not t=0) to give vdac a
+* full 1us of real, driven settling after sampling before any trial code
+* or comparator evaluation begins. The original t=0 start left vdac
+* floating (no active driver) during phi_s's LOW precharge window
+* [0,100n], which an earlier run showed causes vdac to wander to an
+* arbitrary, non-physical starting value (-0.29V observed) before slowly
+* drifting toward vcm -- a testbench artifact, not real circuit behavior.
+* Pushing the whole schedule out by 1us ensures phi_s's sample pulse and
+* vdac's reset-to-vcm have long settled before trial1 is evaluated.
+* -------------------------
+Vclk    clk    0 PULSE(0 1.8 1000n 1n 1n 990n 2000n)
+Vclkbar clkbar 0 PULSE(1.8 0 1000n 1n 1n 990n 2000n)
+
+* phi_s: starts LOW [0,100n] so the bootstrap cap precharges, then HIGH
+* [100n,400n] to sample vin onto the bottom plates and reset vdac to vcm,
+* then LOW for the rest of the run (convert phase). Sampling now finishes
+* (400n) a full 600ns before clk's first rising edge (1000n), giving vdac
+* real settled time before trial1's window begins.
+Vphi_s phi_s 0 PULSE(0 1.8 100n 1n 1n 300n 100u)
+
+* -------------------------
+* Fixed trial codes -- windows now start at t=1us (matching the shifted
+* clk), each 2us wide, same code sequence as before:
+*   trial 1 [1u-3u]:   D=512 = 1000000000  (sw9=1, rest 0)
+*   trial 2 [3u-5u]:   D=768 = 1100000000  (sw9=1,sw8=1, rest 0)
+*   trial 3 [5u-7u]:   D=640 = 1010000000  (sw9=1,sw8=0,sw7=1, rest 0)
+*   trial 4 [7u-9u]:   D=704 = 1011000000  (sw9=1,sw8=0,sw7=1,sw6=1, rest 0)
+* sw9 goes high at t=1us (start of trial1) and stays high throughout.
+* Before t=1us, all bits are 0 (irrelevant -- convert phase hasn't
+* started yet, phi_s is still controlling the bottom plates via sampling).
+* -------------------------
+Vsw9 cdac_sw9 0 PWL(0 0  999n 0  1000n 1  8999n 1)
+Vsw8 cdac_sw8 0 PWL(0 0  2999n 0  3000n 1  4999n 1  5000n 0  8999n 0)
+Vsw7 cdac_sw7 0 PWL(0 0  4999n 0  5000n 1  8999n 1)
+Vsw6 cdac_sw6 0 PWL(0 0  6999n 0  7000n 1  8999n 1)
+Vsw5 cdac_sw5 0 DC 0
+Vsw4 cdac_sw4 0 DC 0
+Vsw3 cdac_sw3 0 DC 0
+Vsw2 cdac_sw2 0 DC 0
+Vsw1 cdac_sw1 0 DC 0
+Vsw0 cdac_sw0 0 DC 0
+
+* -------------------------
+* Block instantiations
+* -------------------------
+Xcdac vdac cdac_sw9 cdac_sw8 cdac_sw7 cdac_sw6 cdac_sw5
++      cdac_sw4 cdac_sw3 cdac_sw2 cdac_sw1 cdac_sw0
++      vref vdd gnd vin phi_s vcm cdac
+
+Xcmp vdd comp_x comp_y clkbar vdac vcm strongarm_comparator
+
+.ic v(vdac)=0.9 v(xcdac.vin_s)=1.2 v(xcdac.bp9)=1.2 v(xcdac.bp8)=1.2 v(xcdac.bp7)=1.2 v(xcdac.bp6)=1.2
++   v(xcdac.bp5)=1.2 v(xcdac.bp4)=1.2 v(xcdac.bp3)=1.2 v(xcdac.bp2)=1.2 v(xcdac.bp1)=1.2 v(xcdac.bp0)=1.2 v(xcdac.bpt)=1.2
+
+.tran 1n 9u UIC
+
+.probe v(vdac) v(clk) v(clkbar) v(phi_s) v(comp_x) v(comp_y)
+.probe v(cdac_sw9) v(cdac_sw8) v(cdac_sw7)
+
+* Comparator decision at each trial, read 1.9us AFTER the window's clk
+* rising edge (i.e. at window_start+1900ns), which is safely inside the
+* evaluate phase (clkbar rises ~991ns into each window and stays high
+* until the window closes at +2000ns). An earlier version of this file
+* measured at window_start+900ns, which is BEFORE clkbar rises -- that
+* reads the leftover precharge-high state, not the comparator's actual
+* decision. Confirmed by direct inspection of a zoomed plot: vdac was
+* correctly settled and comp_y correctly flipped low the instant clkbar
+* rose, but the old meas point sampled 91ns too early to see it.
+.meas tran vdac_trial1   find v(vdac)   at=2900n
+.meas tran compy_trial1  find v(comp_y) at=2900n
+
+.meas tran vdac_trial2   find v(vdac)   at=4900n
+.meas tran compy_trial2  find v(comp_y) at=4900n
+
+.meas tran vdac_trial3   find v(vdac)   at=6900n
+.meas tran compy_trial3  find v(comp_y) at=6900n
+
+.meas tran vdac_trial4   find v(vdac)   at=8900n
+.meas tran compy_trial4  find v(comp_y) at=8900n
+
+.end

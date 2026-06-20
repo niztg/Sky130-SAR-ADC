@@ -1,0 +1,90 @@
+* Testbench for the REAL 10-bit cdac.spice (bottom-plate sampling,
+* no dummy compensation switch -- clean baseline matching the version
+* the offset was originally measured on).
+*
+* Sweeps vin across three values (0.3V, 0.6V, 0.9V) via .step param, to
+* check whether the kick/offset on vdac_postsample is a CONSTANT residual
+* (input-independent, as the gate-overlap-feedthrough theory predicts) or
+* whether it varies with vin (which would mean a fixed digital calibration
+* constant is NOT a valid fix).
+*
+* For each vin, the testbench then steps through three representative
+* codes: D=0, D=512 (MSB only), D=1023 (all switches to vref).
+*
+* Predicted vdac_postsample = vcm - vin  (before any code switching)
+*   vin=0.3V -> predicted 0.600V
+*   vin=0.6V -> predicted 0.300V
+*   vin=0.9V -> predicted 0.000V
+*
+* Predicted vdac_D0/D512/D1023 = (vcm - vin) + vref*D/1024
+* CAVEAT: D=1023 may approach/exceed VDD depending on vin, expect
+* saturation/clipping there -- it's a stress test, not a clean linear
+* check (same caveat as the original single-vin version of this file).
+*
+* .ic/UIC cold-start conditions are tied to {VIN_TEST} so each stepped
+* run starts cleanly at vdac=0.9V (reset target) and vin_s/bp*=VIN_TEST
+* (matching that step's vin), avoiding the DC-operating-point startup
+* artifact found and fixed in the single-vin version of this testbench.
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.include "cdac.spice"
+
+* ============================================================
+* Bootstrapped sampling switch (verified block, reused as-is)
+* ============================================================
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ1 VDD net1 net3 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch
+
+.param VIN_TEST = 0.6
+
+Vvdd vdd 0 DC 1.8
+Vvref vref 0 DC 1.8
+Vvcm vcm 0 DC 0.9
+Vvin vin 0 DC {VIN_TEST}
+
+* phi_s: one-shot sample pulse, 300ns wide (matches measured 156.8ns
+* 10-bit settling time with ~2x margin, same as sar_adc_tb.spice)
+Vphi_s phi_s 0 PULSE(0 1.8 0 1n 1n 300n 10u)
+
+* Bit sources: held at 0 during sample, then stepped through D=0, D=512,
+* D=1023 -- each held flat for 500ns with sharp (1ns) transitions.
+* D=0:    all bits 0 throughout (no source needed beyond DC 0... but use
+*          PWL for consistency / easy future editing)
+Vsw9 cdac_sw9 0 PWL(0 0  599n 0  600n 0  1099n 0  1100n 1  1599n 1  1600n 1  2099n 1)
+Vsw8 cdac_sw8 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw7 cdac_sw7 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw6 cdac_sw6 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw5 cdac_sw5 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw4 cdac_sw4 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw3 cdac_sw3 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw2 cdac_sw2 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw1 cdac_sw1 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+Vsw0 cdac_sw0 0 PWL(0 0  1599n 0  1600n 1  2099n 1)
+
+Xcdac vdac cdac_sw9 cdac_sw8 cdac_sw7 cdac_sw6 cdac_sw5
++      cdac_sw4 cdac_sw3 cdac_sw2 cdac_sw1 cdac_sw0
++      vref vdd gnd vin phi_s vcm cdac
+
+.ic v(vdac)=0.9 v(xcdac.vin_s)={VIN_TEST} v(xcdac.bp9)={VIN_TEST} v(xcdac.bp8)={VIN_TEST} v(xcdac.bp7)={VIN_TEST} v(xcdac.bp6)={VIN_TEST}
++   v(xcdac.bp5)={VIN_TEST} v(xcdac.bp4)={VIN_TEST} v(xcdac.bp3)={VIN_TEST} v(xcdac.bp2)={VIN_TEST} v(xcdac.bp1)={VIN_TEST} v(xcdac.bp0)={VIN_TEST} v(xcdac.bpt)={VIN_TEST}
+
+.tran 100p 2.1u UIC
+
+.probe v(vdac) v(phi_s) v(cdac_sw9) v(cdac_sw0)
+
+* Checkpoints matching the 2-bit test, to isolate the same kick mechanism:
+.meas tran vdac_after_sample find v(vdac) at=299n
+.meas tran vdac_postsample   find v(vdac) at=599n
+
+.meas tran vdac_D0    find v(vdac) at=1050n
+.meas tran vdac_D512  find v(vdac) at=1550n
+.meas tran vdac_D1023 find v(vdac) at=2050n
+
+.end

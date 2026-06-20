@@ -4,6 +4,18 @@
 *.png
 output.log
 
+# ignore installed tool directories (Magic, netgen, Tcl/Tk, xschem install
+# trees) -- these are environment-specific installed software, not project
+# source, and shouldn't live in the repo. Excluded here so they stop being
+# tracked on GitHub; running `git rm --cached -r <dir>` once locally for
+# each (see note below) removes them from git's tracking WITHOUT touching
+# the actual files on disk.
+magic/
+netgen/
+tcl-core-8-6-16/
+xschem/
+xschem_proj/
+
 # keep everything else
 !*.sch
 !*.spice

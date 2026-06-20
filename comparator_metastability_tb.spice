@@ -1,0 +1,53 @@
+* Isolated comparator test -- reproducing the EXACT input values from the
+* failing bit6 trial at vin=1.5V in sar_adc_tb_v2.spice, to determine
+* whether the comparator itself mis-resolves with these specific static
+* values, or whether something about the full-loop context (accumulated
+* state from 5 prior decisions, vin being close to the rail) is the real
+* trigger.
+*
+* Failing trial: predicted vdac=0.8625V, vcm=0.9V (differential = -37.5mV,
+* VIN1 > VIN2, should resolve comp_x LOW / comp_y HIGH = KEEP). In the
+* full ADC this instead resolved comp_x HIGH / comp_y LOW (CLEAR) -- wrong.
+*
+* Method: same one-shot, cold-start methodology as bs_comp_oneshot_tb.spice
+* (the testbench that originally verified the comparator), but with static
+* DC sources set to these EXACT values instead of being driven by a CDAC.
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+.subckt strongarm_comparator VDD X Y CLK VIN2 VIN1
+XS1 P CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS3 X CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM5 X Y VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM6 Y X VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS4 Y CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XS2 Q CLK VDD VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM4 Y X Q 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM3 X Y P 0 sky130_fd_pr__nfet_01v8 L=0.15 W=4 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM1 P VIN1 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM2 Q VIN2 net1 0 sky130_fd_pr__nfet_01v8 L=0.15 W=8 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XM7 net1 CLK 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends strongarm_comparator
+
+Vvdd vdd 0 DC 1.8
+Vvcm vcm 0 DC 0.9
+Vvdac vdac 0 DC 0.8625
+
+* One-shot strobe: CLK low (precharge) until 100ns, then high (evaluate)
+* for the rest of the run. Cold start via .ic on the regenerative nodes
+* X,Y so the precharge state is unambiguous at t=0.
+Vclk clk 0 PULSE(0 1.8 100n 1n 1n 10u 20u)
+
+Xcmp vdd comp_x comp_y clk vdac vcm strongarm_comparator
+
+.ic v(comp_x)=1.8 v(comp_y)=1.8
+.tran 10p 500n UIC
+
+.probe v(comp_x) v(comp_y) v(clk)
+
+.meas tran compx_final find v(comp_x) at=400n
+.meas tran compy_final find v(comp_y) at=400n
+.meas tran t_resolve when v(comp_y)=0.9 rise=1
+.meas tran t_resolve_fall when v(comp_y)=0.9 fall=1
+
+.end

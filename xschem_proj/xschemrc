@@ -1,2 +1,0 @@
-set PDKPATH "$env(PDK_ROOT)/sky130A"
-append XSCHEM_LIBRARY_PATH ":${PDKPATH}/libs.tech/xschem"

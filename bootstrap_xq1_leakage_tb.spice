@@ -1,0 +1,51 @@
+* Standalone bootstrapped_switch testbench with a current-sense probe on
+* XQ1's drain (net3), to directly measure whether XQ1 conducts when it
+* should be fully off during the sample phase -- suspected leakage path
+* draining the boost cap's charge as vin approaches vdd.
+*
+* Method: a 0V sense voltage source (Vsense) inserted in series between
+* XQ1's drain and net3, so its node-to-node current IS the current
+* flowing into net3 through XQ1. A 0V source doesn't disturb the circuit
+* (zero impedance, zero voltage drop) but lets ngspice report i(Vsense)
+* directly via .probe, sidestepping the i(...)/@m...[id] syntax issues.
+*
+* Same one-shot, cold-start methodology as the original bootstrap
+* isolation testbench (PHIBAR starts HIGH for precharge, goes LOW once
+* to sample), but at vin=1.5V specifically, to reproduce the undersampling
+* found in the full ADC.
+
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+.subckt bootstrapped_switch_probed VDD PHIBAR VOUT VIN
+XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
+XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+* XQ1's drain now goes to net3_sense instead of directly to net3 --
+* Vsense (0V) measures the current flowing between them, which equals
+* XQ1's actual drain current with zero circuit disturbance.
+XQ1 VDD net1 net3_sense VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+Vsense net3_sense net3 DC 0
+XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends bootstrapped_switch_probed
+
+Vvdd vdd 0 DC 1.8
+Vvin vin 0 DC 1.5
+
+* One-shot: PHIBAR starts HIGH (precharge), single pulse LOW at 100ns to
+* sample, matching the real ADC's phi_s/phi_sb timing convention (PHIBAR
+* is the bootstrap's own enable, active-low for sampling).
+Vphibar phibar 0 PULSE(1.8 0 100n 1n 1n 10u 20u)
+
+Xboot vdd phibar vout vin bootstrapped_switch_probed
+
+.ic v(vout)=0
+.tran 10p 200n UIC
+
+.probe v(xboot.net1) v(xboot.net2) v(xboot.net3) v(vout) v(phibar)
+.save all
+.save i(xboot.vsense)
+.print tran v(xboot.net1) v(xboot.net2) v(xboot.net3) i(xboot.vsense)
+
+.end

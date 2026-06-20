@@ -1,0 +1,58 @@
+* ============================================================
+* ISOLATION TEST 1 : SAR logic FSM alone, comparator FORCED
+* ------------------------------------------------------------
+* Feeds the synthesized FSM the exact decision sequence a 0.6V
+* conversion should produce (d9..d0 = 0 1 0 1 0 1 0 1 0 1) and
+* checks the machine walks the binary search.  No analog at all.
+*
+* PASS  : result = 0101010101 (=341), and cdac_sw.9..0 light up
+*         one-at-a-time as the search descends.
+* FAIL  : if result = 1000000000 here too, the bug is the FSM
+*         netlist itself (synthesis / fix_spice_ports), not the
+*         comparator or CDAC.
+* ============================================================
+.lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.include "/Users/nizansari/Desktop/Projects/SAR ADC/sar_logic_fixed.spice"
+
+Vvdd vdd 0 DC 1.8
+
+* clk: 100ns period. Rising edges at 50,150,250,... ns
+Vclk   clkin 0 PULSE(0 1.8 50n 1n 1n 49n 100n)
+Vrst   rst   0 PULSE(0 1.8 0   1n 1n 20n 10u)
+* start spans the 150ns edge -> START asserts MSB there; bit9 processed at 250ns
+Vstart start 0 PULSE(0 1.8 100n 1n 1n 100n 10u)
+
+* comp_in forced. Value must be valid at each rising edge:
+*   edge 250ns -> bit9 decision d9=0
+*   edge 350ns -> bit8 d8=1 ; 450->d7=0 ; 550->d6=1 ; 650->d5=0
+*   edge 750ns -> bit4 d4=1 ; 850->d3=0 ; 950->d2=1 ; 1050->d1=0 ; 1150->d0=1
+Vcompin comp_in 0 PWL(0 0
++  299n 0    300n 1.8   399n 1.8  400n 0    499n 0    500n 1.8
++  599n 1.8  600n 0     699n 0    700n 1.8  799n 1.8  800n 0
++  899n 0    900n 1.8   999n 1.8  1000n 0   1099n 0   1100n 1.8  2000n 1.8)
+
+Xsar clkin rst start comp_in
++     cdac_sw.9 cdac_sw.8 cdac_sw.7 cdac_sw.6 cdac_sw.5
++     cdac_sw.4 cdac_sw.3 cdac_sw.2 cdac_sw.1 cdac_sw.0
++     result.9 result.8 result.7 result.6 result.5
++     result.4 result.3 result.2 result.1 result.0
++     done vdd 0 sar_logic
+
+.tran 100p 1.4u
+.probe v(clkin) v(comp_in) v(done)
+.probe v(cdac_sw.9) v(cdac_sw.8) v(cdac_sw.7) v(cdac_sw.6) v(cdac_sw.5)
+.probe v(cdac_sw.4) v(cdac_sw.3) v(cdac_sw.2) v(cdac_sw.1) v(cdac_sw.0)
+.probe v(result.9) v(result.8) v(result.7) v(result.6) v(result.5)
+.probe v(result.4) v(result.3) v(result.2) v(result.1) v(result.0)
+
+.meas tran r9 find v(result.9) at=1.3u
+.meas tran r8 find v(result.8) at=1.3u
+.meas tran r7 find v(result.7) at=1.3u
+.meas tran r6 find v(result.6) at=1.3u
+.meas tran r5 find v(result.5) at=1.3u
+.meas tran r4 find v(result.4) at=1.3u
+.meas tran r3 find v(result.3) at=1.3u
+.meas tran r2 find v(result.2) at=1.3u
+.meas tran r1 find v(result.1) at=1.3u
+.meas tran r0 find v(result.0) at=1.3u
+.end

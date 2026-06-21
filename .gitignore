@@ -26,4 +26,6 @@ xschem_proj/
 !.gitignore
 !helper/
 !helper/**
+!sar_logic_verilog/
+!sar_logic_verilog/**
 !README.md

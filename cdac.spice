@@ -146,32 +146,12 @@ XMSWt_smpp bpt phi_sb vin_s vdd sky130_fd_pr__pfet_01v8 L=0.15 W=4 nf=1 ad='int(
 
 
 * ============================================================
-* Floating n-well bias generator -- fix for XQ1/XQ2 forward-biased
-* source/drain-to-bulk junction (root cause of the -78 LSB error at
-* vin=1.5V; confirmed via standalone leakage testbench, isolated to
-* ~382fC/cycle lost when XQ1/XQ2 bulk was tied to fixed VDD while
-* net1/net3 boost above VDD during sampling). Tracks max(VDD, NET1):
-* XWA passes VDD through during precharge, XWB passes NET1 through
-* during boost, each device's own bulk ties to the shared output node
-* so the inactive device stays reverse-biased by construction.
+* Bootstrapped sampling switch, including the n-well forward-bias fix
+* (root cause of the original -78 LSB error at vin=1.5V -- full
+* writeup, diagnosis, and confirmation data live in the comment block
+* at the top of bootstrapped_switch.spice itself, the canonical source
+* for this subcircuit). Pulled in here via .include rather than
+* embedded inline, so there's exactly one copy of this circuit in the
+* project rather than two that could silently drift apart.
 * ============================================================
-.subckt nwell_switch VDD NET1 NWELL
-XWA NWELL NET1 VDD  NWELL sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XWB NWELL VDD  NET1 NWELL sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-.ends
-
-* ============================================================
-* Bootstrapped sampling switch (FIXED -- XQ1/XQ2 bulk now routed
-* through nwell_switch instead of fixed VDD; see comment above)
-*   samples VIN onto VOUT while PHIBAR is LOW
-* ============================================================
-.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
-XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
-XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-Xwellbias VDD net1 nwell nwell_switch
-XQ1 VDD net1 net3 nwell sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XQ2 net3 PHIBAR net1 nwell sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-.ends bootstrapped_switch
+.include "bootstrapped_switch.spice"

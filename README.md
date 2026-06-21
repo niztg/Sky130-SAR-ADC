@@ -13,17 +13,7 @@ Status legend:
   the nwell forward bias fix which only exists at the SPICE-level
 - **`bootstrapped_switch.spice`** — standalone copy of the fixed
   subcircuit (`nwell_switch` + `bootstrapped_switch` with XQ1/XQ2 bulk on
-  `nwell`). There was never an unfixed standalone version of this file —
-  the original unfixed circuit only ever existed embedded inline inside
-  other files. This is simply the `_fixed` file from earlier in the
-  session, renamed. **Not currently `.include`d by anything** — `cdac.
-  spice` has its own separate inline copy of the same fix, which is the
-  one actually exercised by `sar_adc_tb_v2.spice` and the verification
-  table below. Two copies of the same fix now exist in the project; worth
-  consolidating (have `cdac.spice` `.include` this file instead of
-  embedding its own copy) if you want a single source of truth rather
-  than two things that could silently drift apart if one gets edited
-  later and the other doesn't.
+  `nwell`). 
 - **`bootstrapped_switch.png`** — rendered image of the schematic. Will
   go stale once the schematic above is updated to match the fix —
   re-render after.

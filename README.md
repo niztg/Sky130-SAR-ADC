@@ -19,27 +19,103 @@ These are the individually-verified analog/digital blocks the rest of the
 design is built from. All confirmed correct in isolation.
 
 - **`bootstrapped_switch.sch`**, **`bootstrapped_switch.sym`** — xschem
-  schematic and symbol for the bootstrapped sampling switch. CURRENT,
-  VERIFIED.
+  schematic and symbol for the bootstrapped sampling switch. **PENDING
+  UPDATE**: the n-well forward-bias fix (see dedicated section below) has
+  been applied at the SPICE level (inline in `cdac.spice`'s copy of
+  `bootstrapped_switch`) but **not yet** to this schematic. Until updated,
+  this schematic does not match the verified-correct circuit. To fix:
+  add two more `sky130_fd_pr/pfet_01v8.sym` instances (`XWA`/`XWB`, wired
+  per the `nwell_switch` subcircuit below), then move XQ1's and XQ2's bulk
+  pin connections off the VDD net onto the new `nwell` net.
 - **`bootstrapped_switch_tb.sch`**, **`bootstrapped_switch_tb.spice`**,
   **`bootstrapped_switch_tb.sym`** — testbench (schematic + exported
-  SPICE + symbol) for the switch in isolation. VERIFIED: correct sampling
-  behavior, settling time measured (~156.8ns for 10-bit settling at the
-  full 25.6pF array load).
+  SPICE + symbol) for the switch in isolation. VERIFIED (sampling
+  behavior, ~156.8ns settling at full 25.6pF load) **but this predates
+  the n-well fix** — `bootstrapped_switch_tb.spice` still contains the
+  old, forward-bias-prone subcircuit (XQ1/XQ2 bulk tied to fixed VDD).
+  Settling-time result is unaffected (different mechanism), but this file
+  needs the same patch as `bootstrapped_switch.sch` before being trusted
+  again for anything voltage-accuracy-related.
 - **`bootstrapped_switch.png`** — rendered image of the schematic, likely
-  for documentation/sharing. CURRENT.
+  for documentation/sharing. CURRENT (will go stale once the schematic
+  above is updated — re-render after).
 - **`strongarm_comparator.sch`**, **`strongarm_comparator.sym`** — xschem
   schematic and symbol for the StrongARM comparator. CURRENT, VERIFIED.
 - **`strongarm_comparator_tb.sch`**, **`strongarm_comparator_tb.spice`** —
   testbench for the comparator in isolation. VERIFIED: correct polarity
   (VIN2>VIN1 → X high/Y low), fast resolution (sub-ns).
 - **`cdac.spice`** — the real 10-bit CDAC subcircuit (bottom-plate
-  sampling, no dummy compensation switch). CURRENT, VERIFIED: bottom-plate
-  sampling and convert-phase switching both confirmed accurate to
-  sub-microvolt level (cold-start tested). Has a known, small (~mV-scale,
-  mildly input-dependent), well-characterized feedthrough kick on the
-  top-plate reset switch — documented, not yet fixed, candidate for
-  digital calibration.
+  sampling, no dummy compensation switch). **CURRENT, VERIFIED** — now
+  includes the n-well bias fix (see below) inline in its embedded
+  `bootstrapped_switch`/new `nwell_switch` subcircuits. Bottom-plate
+  sampling and convert-phase switching confirmed accurate to sub-µV
+  (cold-start tested). Known top-plate reset feedthrough kick (`XTOP_n`)
+  is still present and still not fixed — see the open question at the
+  end of the n-well section below, since with the much larger bootstrap
+  bug now resolved, this kick (or something related to it) is the
+  leading candidate for the remaining error at high `vin`, though its
+  magnitude hasn't been directly re-confirmed by measurement yet.
+
+## Bootstrap switch n-well forward-bias fix (this session)
+
+**Bug.** `XQ1` and `XQ2` inside `bootstrapped_switch` had their bulk pins
+tied directly to `VDD`, while their own source/drain terminals (`net1`,
+`net3`) are designed to boost well above `VDD` during the sample phase.
+This forward-biases the PMOS source/drain-to-bulk junction once the
+boosted node exceeds `VDD` by more than a diode drop (~0.7V), clamping
+the boost and bleeding real charge from the boost cap (`C_boot`) into the
+VDD rail. This was the root cause of the originally-found -78 LSB error
+at `vin`=1.5V.
+
+**Diagnosis.** A standalone leakage testbench (`bootstrap_xq1_leakage_tb.
+spice`, written this session, not yet copied into the main project
+directory — currently only in chat outputs) isolated this via direct
+current-sense measurement on XQ1/XQ2's bulk pins: ~382fC lost per cycle
+at `vin`=1.5V, accounting for ~97% of the charge deficit measured
+directly on `C_boot` (787.9mV settled-voltage drop against a precharged
+1.8V, vs. only ~1fC attributable to XQ1's channel current alone — ruling
+out the original turn-off-race-timing hypothesis and pointing instead at
+the bulk junction).
+
+**Fix.** New `nwell_switch` subcircuit generates a floating well-bias
+node tracking `max(VDD, net1)`: `XWA` passes `VDD` through during
+precharge, `XWB` passes `net1` through during boost, each device's own
+bulk ties to the shared output node so the inactive device stays
+reverse-biased by construction (the fix doesn't reintroduce the same
+problem on itself). `XQ1`/`XQ2` bulk now routes through this node
+instead of fixed `VDD`.
+
+**Confirmation.** Standalone testbench: `vin_s` sampling error dropped
+from 99.5mV to 0.94µV at `vin`=1.5V post-fix (`q_bulk_total` collapsed
+from -382fC to +0.15fC). Full-ADC re-verification via `sar_adc_tb_v2.
+spice` at three `vin` points (post-fix):
+
+| vin   | measured D | ideal D | error    |
+|-------|-----------|---------|----------|
+| 0.6V  | 335       | 341     | -6 LSB   |
+| 1.2V  | 671       | 682     | -11 LSB  |
+| 1.5V  | 799       | 853     | -54 LSB  |
+
+0.6V and 1.2V land close to the already-characterized benign top-plate
+feedthrough baseline (~6-11 LSB) — effectively resolved. **1.5V does
+not** — -54 LSB is far beyond that baseline, and the growth from
+1.2V→1.5V is much steeper than 0.6V→1.2V, suggesting something
+accelerating as `vin` approaches `VDD`.
+
+**Open question, not yet resolved.** Direct measurement of `vin_s`
+itself in the full-ADC context (`v(xcdac.vin_s)` at end of sample window)
+came back clean at all three points — 0.11mV (1.2V), 1.22mV (0.6V,
+oddly signed), 2.97mV (1.5V) — nowhere near large enough to explain the
+1.5V residual on its own. So the n-well fix appears to have fully
+resolved the mechanism it targeted; whatever remains at 1.5V is a
+**separate** error source, most likely (not yet confirmed) the `XTOP_n`
+top-plate reset feedthrough kick scaling up more steeply at high `vin`
+than previously characterized (which only covered 0.3-0.9V). A
+measurement was added to `sar_adc_tb_v2.spice` to test this directly
+(`vdac_kick`, comparing `v(vdac)` just after the `phi_s` falling edge
+against the ideal 0.9V reset target) but has **not yet been run**. Next
+session: run it at all three `vin` points and check whether `vdac_kick`
+scales in proportion to the 6/11/54 LSB pattern above.
 
 ## SAR logic — digital block
 
@@ -97,7 +173,10 @@ design is built from. All confirmed correct in isolation.
   doesn't support `.step param`. VERIFIED: with cold-start conditions, the
   CDAC's feedthrough kick residual is small and grows mildly with `vin`
   (0.6mV → 4.8mV → 9.0mV across the three values) — this is the data that
-  established the offset is *not* perfectly input-independent.
+  established the offset is *not* perfectly input-independent. (Note:
+  this only covers 0.3-0.9V; whether the trend continues growing steeply
+  enough to explain the 1.5V residual above is the open question flagged
+  in the n-well fix section.)
 
 ## Comparator + CDAC chain testbenches (this session)
 
@@ -133,20 +212,33 @@ design is built from. All confirmed correct in isolation.
   plus: cold-start `.ic`/`UIC` conditions, a `.meas ... WHEN` check on the
   actual `done` assertion time instead of an assumed one, and full
   per-bit trace probes (`cdac_sw.*`, `comp_in`, `comp_x`/`comp_y`,
-  `sr_qbar`) at each of the ten trial decisions. Running this at vin=1.2V
-  dropped the error from -76/-77 LSB down to **-11 LSB**, and the
-  per-bit trace pinpointed the first divergence from the ideal search
-  trajectory at the bit5 decision (trial D=672, predicted margin from
-  threshold only ~18.75mV) — consistent with the small, already-
-  characterized CDAC feedthrough kick finally being large enough to flip
-  a close call as the binary search's margins naturally tighten.
-  **This is the most current, most trustworthy full-ADC testbench in the
-  directory.**
+  `sr_qbar`) at each of the ten trial decisions. Originally run at
+  vin=1.2V (before the n-well fix existed) gave -11 LSB, attributed at
+  the time entirely to CDAC top-plate feedthrough. **Re-run after the
+  n-well fix** at three `vin` points (0.6V/1.2V/1.5V): see the table in
+  the n-well fix section above. 1.2V's -11 LSB matches the earlier
+  pre-fix figure almost exactly — interesting cross-validation suggesting
+  the bootstrap bug's contribution at 1.2V was small even before being
+  fixed (consistent with the bug's severity growing with `vin`), while at
+  1.5V the bug's contribution was apparently large enough that it can't
+  be cleanly compared pre/post-fix the same way. **This remains the most
+  current, most trustworthy full-ADC testbench in the directory**, but
+  the 1.5V residual is an open item — see next steps.
 
 ---
 
 ## Next steps
 
+- **Run the `vdac_kick` measurement** (already added to `sar_adc_tb_v2.
+  spice`) at all three `vin` points to test whether the top-plate reset
+  feedthrough kick explains the 1.5V residual, or whether there's still
+  a third, unidentified mechanism.
+- **Apply the n-well fix to the schematic**: `bootstrapped_switch.sch`
+  and `bootstrapped_switch_tb.spice` both still have the old, forward-
+  bias-prone bulk wiring. Only `cdac.spice`'s inline copy has been
+  patched so far. Copy `bootstrap_xq1_leakage_tb.spice` from chat outputs
+  into the project directory too, since it's the testbench that found
+  and confirmed this fix and is referenced above.
 - Decide on `cdac2.spice`'s fate: revert the dummy-switch experiment to a
   clean baseline, or leave it as a documented failed attempt.
 - Quickly confirm what `comparator_chain_tb.spice`, `meas`, `output.log`,

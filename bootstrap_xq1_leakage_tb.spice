@@ -1,51 +1,91 @@
-* Standalone bootstrapped_switch testbench with a current-sense probe on
-* XQ1's drain (net3), to directly measure whether XQ1 conducts when it
-* should be fully off during the sample phase -- suspected leakage path
-* draining the boost cap's charge as vin approaches vdd.
+* XQ1/XQ2 leakage characterization — bootstrapped switch
+* Single PHIBAR transition, vin=1.5V (worst case), cold start via TD=100n
+* settling rather than hand-set .ic, full CDAC load on VOUT (25.6pF)
 *
-* Method: a 0V sense voltage source (Vsense) inserted in series between
-* XQ1's drain and net3, so its node-to-node current IS the current
-* flowing into net3 through XQ1. A 0V source doesn't disturb the circuit
-* (zero impedance, zero voltage drop) but lets ngspice report i(Vsense)
-* directly via .probe, sidestepping the i(...)/@m...[id] syntax issues.
+* History: VSENSE_XQ1 (drain-side sense) showed channel current far too
+* small (~1fC over 100-120n) to explain the ~394fC C_boot actually loses
+* over the same window. XQ1 and XQ2 both had bulk tied directly to VDD
+* while net1/net3 boost well above VDD -- this forward-biases their
+* source/drain-to-bulk junctions. VSENSE_XQ1B/VSENSE_XQ2B confirmed it:
+* q_bulk_total came back at -382fC, closing ~97% of the 394fC deficit.
 *
-* Same one-shot, cold-start methodology as the original bootstrap
-* isolation testbench (PHIBAR starts HIGH for precharge, goes LOW once
-* to sample), but at vin=1.5V specifically, to reproduce the undersampling
-* found in the full ADC.
+* Fix under test: nwell_switch generates a floating well-bias node that
+* tracks max(VDD, net1) -- MWA passes VDD through during precharge,
+* MWB passes net1 through during boost, each gated by the other rail so
+* the inactive device is always reverse-biased by construction (each
+* device's own bulk is tied to the shared output node, not to a fixed
+* rail, so the fix doesn't reintroduce the same problem on itself).
+* XQ1/XQ2 bulk now route through this node instead of straight to VDD.
+* VSENSE_XQ1B/VSENSE_XQ2B stay in place, now measuring the *residual*
+* junction current post-fix -- should collapse toward zero if this works.
 
 .lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
 
-.subckt bootstrapped_switch_probed VDD PHIBAR VOUT VIN
+.subckt nwell_switch VDD NET1 NWELL
+XWA NWELL NET1 VDD  NWELL sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+XWB NWELL VDD  NET1 NWELL sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends
+
+.subckt bootstrapped_switch VDD PHIBAR VOUT VIN
 XQ0 VIN net1 VOUT 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
 XC_boot net3 net2 sky130_fd_pr__cap_mim_m3_1 W=15.6 L=15.6 MF=1
 XQ5 net1 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
 XQ4 VIN net1 net2 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-* XQ1's drain now goes to net3_sense instead of directly to net3 --
-* Vsense (0V) measures the current flowing between them, which equals
-* XQ1's actual drain current with zero circuit disturbance.
-XQ1 VDD net1 net3_sense VDD sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-Vsense net3_sense net3 DC 0
+
+* Floating well bias, shared by XQ1 and XQ2
+Xwellbias VDD net1 nwell nwell_switch
+
+VSENSE_XQ1 VDD xq1d 0
+VSENSE_XQ1B nwell xq1b 0
+XQ1 xq1d net1 net3 xq1b sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
 XQ3 net2 PHIBAR 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-XQ2 net3 PHIBAR net1 VDD sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
-.ends bootstrapped_switch_probed
+VSENSE_XQ2B nwell xq2b 0
+XQ2 net3 PHIBAR net1 xq2b sky130_fd_pr__pfet_01v8 L=0.15 W=1 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29' pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W' sa=0 sb=0 sd=0 mult=1
+.ends
 
-Vvdd vdd 0 DC 1.8
-Vvin vin 0 DC 1.5
+* --- Top level ---
+V1 VDD 0 1.8
+V2 VIN 0 1.5
+V3 PHIBAR 0 PULSE(1.8 0 100n 1n 1n 300n 1000n)
+C1 VOUT 0 25.6p
+x1 VDD PHIBAR VOUT VIN bootstrapped_switch
 
-* One-shot: PHIBAR starts HIGH (precharge), single pulse LOW at 100ns to
-* sample, matching the real ADC's phi_s/phi_sb timing convention (PHIBAR
-* is the bootstrap's own enable, active-low for sampling).
-Vphibar phibar 0 PULSE(1.8 0 100n 1n 1n 10u 20u)
+* Cold start: hold-phase steady state (net1=0, net2=0, net3=0, VOUT=0).
+* TD=100n on PHIBAR lets the circuit settle from this start before the
+* transition of interest happens, so UIC discontinuities don't
+* contaminate the measurement window.
+.ic v(x1.net1)=0 v(x1.net2)=0 v(x1.net3)=0 v(VOUT)=0
 
-Xboot vdd phibar vout vin bootstrapped_switch_probed
+.tran 5p 450n 0 5p UIC
 
-.ic v(vout)=0
-.tran 10p 200n UIC
+* --- Original channel-current and node measurements ---
+.meas tran ixq1_peak MAX v.x1.vsense_xq1#branch FROM=100n TO=150n
+.meas tran ixq1_trough MIN v.x1.vsense_xq1#branch FROM=100n TO=150n
+.meas tran net1_peak MAX v(x1.net1) FROM=100n TO=150n
+.meas tran net3_peak MAX v(x1.net3) FROM=100n TO=150n
+.meas tran vout_400n FIND v(VOUT) AT=400n
+.meas tran vin_s_error PARAM='1.5 - vout_400n'
+.meas tran net1_settled FIND v(x1.net1) AT=120n
+.meas tran net3_settled FIND v(x1.net3) AT=120n
+.meas tran net2_settled FIND v(x1.net2) AT=120n
+.meas tran cap_voltage_settled PARAM='net3_settled - net2_settled'
+.meas tran vin_minus_net2 PARAM='1.5 - net2_settled'
+.meas tran net3_precharge FIND v(x1.net3) AT=99n
+.meas tran net2_precharge FIND v(x1.net2) AT=99n
+.meas tran cap_voltage_precharge PARAM='net3_precharge - net2_precharge'
+.meas tran cap_voltage_drop PARAM='cap_voltage_precharge - cap_voltage_settled'
+.meas tran qxq1_100_120 INTEG v.x1.vsense_xq1#branch FROM=100n TO=120n
+.meas tran q_deficit_equiv PARAM='cap_voltage_drop * 500e-15'
 
-.probe v(xboot.net1) v(xboot.net2) v(xboot.net3) v(vout) v(phibar)
-.save all
-.save i(xboot.vsense)
-.print tran v(xboot.net1) v(xboot.net2) v(xboot.net3) i(xboot.vsense)
+* --- Bulk-junction current measurements (post-fix, should shrink) ---
+.meas tran ixq1b_peak MAX v.x1.vsense_xq1b#branch FROM=100n TO=150n
+.meas tran ixq2b_peak MAX v.x1.vsense_xq2b#branch FROM=100n TO=150n
+.meas tran qxq1b_100_120 INTEG v.x1.vsense_xq1b#branch FROM=100n TO=120n
+.meas tran qxq2b_100_120 INTEG v.x1.vsense_xq2b#branch FROM=100n TO=120n
+.meas tran q_bulk_total PARAM='qxq1b_100_120 + qxq2b_100_120'
+
+* --- Floating well node, sanity check it actually tracks max(VDD,net1) ---
+.meas tran nwell_precharge FIND v(x1.nwell) AT=99n
+.meas tran nwell_settled FIND v(x1.nwell) AT=120n
 
 .end

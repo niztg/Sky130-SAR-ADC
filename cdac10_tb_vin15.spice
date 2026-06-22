@@ -31,7 +31,7 @@
 .lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
 .include "cdac.spice"
 
-.param VIN_TEST = 0.6
+.param VIN_TEST = 1.5
 
 Vvdd vdd 0 DC 1.8
 Vvref vref 0 DC 1.8

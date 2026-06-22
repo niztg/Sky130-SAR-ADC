@@ -3,7 +3,7 @@
 * the offset was originally measured on).
 *
 * Extends the 0.3V/0.6V/0.9V characterization in cdac10_tb_vin03/06/09
-* .spice up to vin=1.5V, to test whether the top-plate reset
+* .spice up to vin=1.2V, to test whether the top-plate reset
 * feedthrough kick keeps growing steeply enough to explain the -54 LSB
 * residual seen in the full-ADC testbench at vin=1.5V post n-well-fix.
 *
@@ -14,11 +14,11 @@
 * (now-fixed) bootstrap bug doesn't get mixed back into this measurement.
 *
 * Predicted vdac_postsample = vcm - vin  (before any code switching)
-*   vin=1.5V -> predicted -0.600V
+*   vin=1.2V -> predicted -0.300V
 *
 * Predicted vdac_D0/D512/D1023 = (vcm - vin) + vref*D/1024
-*   D512 predicted: 0.3000V
-*   D1023 predicted: 1.1982V
+*   D512 predicted: 0.6000V
+*   D1023 predicted: 1.4982V
 * CAVEAT: D=1023 may approach/exceed VDD depending on vin, expect
 * saturation/clipping there -- it's a stress test, not a clean linear
 * check (same caveat as the original single-vin version of this file).
@@ -31,7 +31,7 @@
 .lib /Users/nizansari/.volare/sky130A/libs.tech/ngspice/sky130.lib.spice tt
 .include "cdac.spice"
 
-.param VIN_TEST = 0.6
+.param VIN_TEST = 1.2
 
 Vvdd vdd 0 DC 1.8
 Vvref vref 0 DC 1.8
@@ -67,7 +67,7 @@ Xcdac vdac cdac_sw9 cdac_sw8 cdac_sw7 cdac_sw6 cdac_sw5
 .probe v(vdac) v(phi_s) v(cdac_sw9) v(cdac_sw0)
 
 * Checkpoints matching the 0.3/0.6/0.9V versions, to extend the same
-* kick-vs-vin trend up through 1.5V:
+* kick-vs-vin trend up through 1.2V:
 .meas tran vdac_after_sample find v(vdac) at=299n
 .meas tran vdac_postsample   find v(vdac) at=599n
 

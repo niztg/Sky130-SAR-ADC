@@ -32,11 +32,6 @@ N -310 -120 -240 -120 {lab=PHIBAR}
 N -240 -240 -240 -120 {lab=PHIBAR}
 N -240 -240 -100 -240 {lab=PHIBAR}
 N -100 -240 -100 -230 {lab=PHIBAR}
-N -420 -190 -420 -150 {lab=VDD}
-N -420 -150 -310 -150 {lab=VDD}
-N -310 -190 -310 -150 {lab=VDD}
-N -310 -150 -100 -150 {lab=VDD}
-N -100 -190 -100 -150 {lab=VDD}
 N -310 -10 -310 -0 {lab=0}
 N -120 -10 -120 10 {lab=0}
 N 0 -20 -0 -10 {lab=0}
@@ -55,6 +50,24 @@ N -160 -340 -160 -240 {lab=PHIBAR}
 N -160 -340 200 -340 {lab=PHIBAR}
 N 200 -340 200 -70 {lab=PHIBAR}
 N 90 -70 200 -70 {lab=PHIBAR}
+N -260 200 -120 -80 {lab=#net1}
+N -230 240 300 240 {lab=VDD}
+N -400 -420 -400 -190 {lab=VDD}
+N -400 -420 310 -420 {lab=VDD}
+N 300 240 310 -420 {lab=VDD}
+N -260 340 -180 240 {lab=VDD}
+N -230 380 -120 380 {lab=#net1}
+N -120 160 -120 380 {lab=#net1}
+N -240 160 -120 160 {lab=#net1}
+N -360 240 -290 240 {lab=#net4}
+N -360 240 -360 380 {lab=#net4}
+N -360 380 -290 380 {lab=#net4}
+N -360 290 -260 240 {lab=#net4}
+N -360 290 -260 380 {lab=#net4}
+N -100 -190 -100 -170 {lab=#net4}
+N -310 -190 -310 -170 {lab=#net4}
+N -310 -170 -100 -170 {lab=#net4}
+N -310 240 -230 -170 {lab=#net4}
 C {sky130_fd_pr/nfet_01v8.sym} 0 10 3 0 {name=Q0
 W=1
 L=0.15
@@ -148,3 +161,31 @@ spiceprefix=X
 }
 C {gnd.sym} -310 0 0 0 {name=l3 lab=0}
 C {gnd.sym} -120 10 0 0 {name=l4 lab=0}
+C {sky130_fd_pr/pfet_01v8.sym} -260 220 1 0 {name=XWA
+W=1
+L=0.15
+nf=1
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=pfet_01v8
+spiceprefix=X
+}
+C {sky130_fd_pr/pfet_01v8.sym} -260 360 1 0 {name=XWB
+W=1
+L=0.15
+nf=1
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=pfet_01v8
+spiceprefix=X
+}

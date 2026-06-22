@@ -84,7 +84,7 @@ XM7 net1 CLK 0 0 sky130_fd_pr__nfet_01v8 L=0.15 W=2 nf=1 ad='int((nf+1)/2) * W/n
 Vvdd vdd 0 DC 1.8
 Vvref vref 0 DC 1.8
 Vvcm vcm 0 DC 0.9
-Vvin vin 0 DC 1.2
+Vvin vin 0 DC 1.5
 
 * -------------------------
 * Clocks (unchanged from original -- reviewed and confirmed sound: clk
@@ -203,5 +203,8 @@ Xsar clk rst start comp_in
 
 .meas tran sw0_bit0 find v(cdac_sw.0) at=20000n
 .meas tran compin_bit0 find v(comp_in) at=20000n
+
+.meas tran vdac_post_reset FIND v(vdac) AT=410n
+.meas tran vdac_kick PARAM='vdac_post_reset - 0.9'
 
 .end

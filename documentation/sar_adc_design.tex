@@ -1,0 +1,79 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{siunitx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{setspace}
+
+\onehalfspacing
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\sisetup{per-mode=symbol}
+
+\title{10-bit SAR ADC Design in Sky130 -- Project Report}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────
+\section{Introduction and Specifications}
+The successive-approximation (SAR) ADC is the most commonly deployed 
+topology of analog-to-digital converter. Owing to its low power consumption, 
+low latency and compact form factor, it has proven supremely versatile, with 
+notable usage in IoT devices, medical equipment and microcontrollers. This document describes an original 10-bit SAR ADC designed and verified in the 
+SkyWater Sky130 open-source 130nm process --- a CMOS PDK developed by SkyWater 
+Technology and Google, providing full device model access without NDA --- targeting 
+the specifications in Table~\ref{tab:specs}. The design covers the complete 
+front-end flow: behavioral modeling from first principles, transistor-level 
+schematic capture in xschem, ngspice simulation against Sky130 device models, 
+and Verilog RTL synthesized to Sky130 standard cells via Yosys. Physical layout 
+is out of scope; the project targets schematic-level verification.
+
+\begin{table}[H]
+    \centering
+    \caption{Design Specifications}
+    \label{tab:specs}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        Parameter & Value  \\
+        \midrule
+        Resolution & 10 bits \\
+        ENOB & $\geq$ 9 bits \\
+        Supply Voltage, $V_{DD}$ & $\qty{1.8}{V}$ \\
+        Input Range & $0\,-\qty{1.8}{V}$ \\
+        Process & SkyWater Sky130, 130nm \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The design followed a bottom-up flow, progressing sequentially through each of the following stages:
+\begin{enumerate}
+    \item First-principles sizing and yield analysis via Python behavioral model
+    \item Block-level schematic capture in xschem and isolation verification in ngspice
+    \item Verilog RTL synthesis to Sky130 standard cells via Yosys
+    \item Full-ADC SPICE integration and static performance characterisation
+\end{enumerate}
+
+This document reports the design decisions, block-level verification, integration debugging and static characterisation of the 10-bit SAR ADC. Ultimately, the design achieves a static ENOB of 7.27 bits, falling short of its 9-bit target, attributable to a characterised top-plate feedthrough mechanism, detailed in Section~\ref{sec:integration}..
+
+\end{document}

@@ -30,4 +30,8 @@ xschem_proj/
 !sar_logic_verilog/**
 !testbenches/
 !testbenches/**
+!figures/
+!figures/**
+!text/
+!text/**
 !README.md

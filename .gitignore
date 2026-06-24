@@ -34,7 +34,6 @@ xschem_proj/
 !figures/**
 !text/
 !text/**
-!documentation/
 !documentation/sar_adc_design.tex
 !documentation/sar_adc_design.pdf
 !README.md

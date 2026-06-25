@@ -37,16 +37,11 @@
 
 % ─────────────────────────────────────────────
 \section{Introduction and Specifications}
-The successive-approximation (SAR) ADC is the most commonly deployed 
-topology of analog-to-digital converter. Owing to its low power consumption, 
-low latency and compact form factor, it has proven supremely versatile, with 
-notable usage in IoT devices, medical equipment and microcontrollers. This document describes an original 10-bit SAR ADC designed and verified in the 
-SkyWater Sky130 open-source 130nm process --- a CMOS PDK developed by SkyWater 
-Technology and Google, providing full device model access without NDA --- targeting 
-the specifications in Table~\ref{tab:specs}. The design covers the complete 
-front-end flow: behavioral modeling from first principles, transistor-level 
-schematic capture in xschem, ngspice simulation against Sky130 device models, 
-and Verilog RTL synthesized to Sky130 standard cells via Yosys. Physical layout 
+The successive-approximation (SAR) ADC is the most commonly deployed topology of analog-to-digital converter. Owing to its low power consumption, 
+low latency and compact form factor, it has proven supremely versatile, with notable usage in IoT devices, medical equipment and microcontrollers. This document describes an original 10-bit SAR ADC designed and verified in the 
+SkyWater Sky130 open-source 130nm process --- a CMOS PDK developed by SkyWater Technology and Google, providing full device model access without NDA --- targeting 
+the specifications in Table~\ref{tab:specs}. The design covers the complete front-end flow: behavioral modeling from first principles, transistor-level 
+schematic capture in xschem, ngspice simulation against Sky130 device models, and Verilog RTL synthesized to Sky130 standard cells via Yosys. Physical layout 
 is out of scope; the project targets schematic-level verification.
 
 \begin{table}[H]
@@ -75,5 +70,52 @@ The design followed a bottom-up flow, progressing sequentially through each of t
 \end{enumerate}
 
 This document reports the design decisions, block-level verification, integration debugging and static characterisation of the 10-bit SAR ADC. Ultimately, the design achieves a static ENOB of 7.27 bits, falling short of its 9-bit target, attributable to a characterised top-plate feedthrough mechanism, detailed in Section~\ref{sec:integration}..
+
+% ─────────────────────────────────────────────
+\section{Architecture Overview}
+
+During the sampling phase, the bootstrapped switch connects $V_{in}$ to all 
+bottom plates of the CDAC array simultaneously, while the top plate is reset 
+to $V_{cm} = V_{ref}/2$ via a transmission gate. This establishes a charge 
+on the top plate node of $Q = (V_{ref}/2 - V_{in}) \cdot C_{total}$. At the 
+start of conversion, the bottom plates disconnect from $V_{in}$ and switch to 
+ground, leaving the top plate floating with its charge preserved. The SAR 
+logic then performs a binary search from the MSB downward: each trial bit 
+steers its corresponding bottom plate to $V_{ref}$, shifting $V_{DAC}$ upward 
+by an amount proportional to that capacitor's weight. The StrongARM comparator 
+evaluates whether $V_{DAC}$ has crossed $V_{ref}/2$, equivalent to testing whether $V_{in}$ exceeds the 
+analog value of the current trial code. The SAR logic retains or clears each 
+bit accordingly:
+
+\begin{enumerate}
+    \item Assert trial code $1000000000$; bottom plate of $512C$ switches to 
+    $V_{ref}$, shifting $V_{DAC}$ upward
+    \item If $V_{DAC} < V_{ref}/2$ (equivalently, $V_{in} > V_{ref}/2$), 
+    retain bit 9; otherwise clear it and return that bottom plate to ground
+    \item Assert the next trial bit and repeat in descending order until all 
+    10 bits are resolved
+\end{enumerate}
+
+This process is summarized by the block diagram in figure~\ref{fig:block_diagram}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.25\textwidth]{figures/block_diagram}
+    \caption{Block diagram of SAR ADC}
+    \label{fig:block_diagram}
+\end{figure}
+
+% ─────────────────────────────────────────────
+\section{Block Design and Sizing}
+
+\subsection{Python Behavioral Model}
+The minimum valid unit capacitance, $C_{unit}$, that can be used in the CDAC array is governed by the thermal noise floor in equation~\ref{eq:thermal_noise_floor}.
+
+\begin{equation}
+    \boxed{C_{min} = \frac{kT}{V_{LSB}^2}} \label{eq:thermal_noise_floor}
+\end{equation}
+
+with $V_{LSB} = \frac{V_{DD}}{N}$, where $N$ is the resolution of the instrument. Substituting $k = \qty{1.38e-23}{J \cdot K}$, $T = \qty{300}{K}$, $V_{DD} = \qty{1.8}{V}$ and $N=10$,
+$C_{min} = \qty{5.36}{\femto F}$.
 
 \end{document}

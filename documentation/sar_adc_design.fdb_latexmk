@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1782371139.44264 "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" "sar_adc_design.pdf" "sar_adc_design" 1782371140.28456 0
-  "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" 1782371139.62321 5362 56cada10757b6624e64bc922dd932de3 ""
+["pdflatex"] 1782374780.29063 "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" "sar_adc_design.pdf" "sar_adc_design" 1782374780.99788 0
+  "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" 1782374780.11199 8108 23c23f351dab4222e498b73522f8935b ""
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1246382020 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -93,10 +93,13 @@
   "/usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1774209607 3636776 dc5fa9b6b1453b9d196cd42edf876004 ""
   "/usr/local/texlive/2026/texmf.cnf" 1774209515 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
   "figures/block_diagram.pdf" 1782371002.52538 68818 029c245847e337afa174a8610a86f43d ""
-  "sar_adc_design.aux" 1782371140.22159 1238 ec9ad6f7fad1c0f8ff774b5efef3a3e4 "pdflatex"
-  "sar_adc_design.out" 1782371140.22213 700 4361ccf554ff15584dc7ab2ee88d0f4c "pdflatex"
-  "sar_adc_design.tex" 1782371139.62321 5362 56cada10757b6624e64bc922dd932de3 ""
-  "sar_adc_design.toc" 1782371140.22235 332 625ce38e7079deb9289f18de86d73043 "pdflatex"
+  "figures/dnl_inl_example.pdf" 1782371822.87925 31535 422cf03e6e4da2d783ccc47476f3881b ""
+  "figures/monte_carlo_histogram.pdf" 1782371822.62295 22906 de578e27c5e1a860bb8760ee73d4e89b ""
+  "figures/yield_vs_cunit.pdf" 1782371806.85243 19007 c5e95281e5f9ca88a36a8e4238b9f3eb ""
+  "sar_adc_design.aux" 1782374780.937 2400 ea7b1a00844879e90dd16560e8517fe7 "pdflatex"
+  "sar_adc_design.out" 1782374780.93771 700 4361ccf554ff15584dc7ab2ee88d0f4c "pdflatex"
+  "sar_adc_design.tex" 1782374780.11199 8108 23c23f351dab4222e498b73522f8935b ""
+  "sar_adc_design.toc" 1782374780.93798 332 a2fa9616be88aea5284b9a66e9272793 "pdflatex"
   (generated)
   "sar_adc_design.aux"
   "sar_adc_design.log"

@@ -100,7 +100,7 @@ This process is summarized by the block diagram in figure~\ref{fig:block_diagram
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1.25\textwidth]{figures/block_diagram}
+    \includegraphics[width=1.1\textwidth]{figures/block_diagram}
     \caption{Block diagram of SAR ADC}
     \label{fig:block_diagram}
 \end{figure}
@@ -117,5 +117,40 @@ The minimum valid unit capacitance, $C_{unit}$, that can be used in the CDAC arr
 
 with $V_{LSB} = \frac{V_{DD}}{N}$, where $N$ is the resolution of the instrument. Substituting $k = \qty{1.38e-23}{J \cdot K}$, $T = \qty{300}{K}$, $V_{DD} = \qty{1.8}{V}$ and $N=10$,
 $C_{min} = \qty{5.36}{\femto F}$.
+
+In order to determine a suitable unit capacitance, a Monte Carlo mismatch analysis was conducted. In each trial, $C_{unit}$ was swept from $\qty{5}{fF}$ to $\qty{54}{fF}$ and a binary-weighted capacitor array,
+$[512, 256, 128, ..., 2, 1, 1] \times C_{unit}$ was generated, representing the CDAC array. Each capacitor in this array was perturbed according to $\sigma_{C/C} \, / \, \sqrt{n_{cells}}$,
+where the mismatch $\sigma_{C/C}$ is 2\%, and $n_{cells} = C_{unit} \, / \, C_{min}$. Using this representation of the CDAC array, the SAR conversion algorithm was executed on $2^{16} = 65\,536$
+input voltages, 64 per binary code. For each trial, the DNL and INL were computed and the maximum INL was recorded. This process was repeated for 10\,000 trials.
+
+The yield is computed as the fraction of trials where the maximum INL is less than 0.5 LSB. As can be seen in figure~\ref{fig:yield_vs_cunit}, the yield surpasses its target of 99\%
+at approximately $\qty{24}{fF}$. Therefore, to allow for some margin, a target value of $C_{unit} = \qty{25}{fF}$ was selected, giving a total CDAC capacitance of $1024 \times \qty{25}{fF} = \qty{25.6}{pF}$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/yield_vs_cunit.pdf}
+    \caption{Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma_{C/C} = 2\%$.}
+    \label{fig:yield_vs_cunit}
+\end{figure}
+
+To validate the selected $C_{unit} = \qty{25}{fF}$, a further 10\,000-trial Monte Carlo simulation was run at this fixed value. Figure~\ref{fig:monte_carlo_histogram} shows the resulting distribution
+of maximum INL across all trials. The distribution is centred near $\qty{0.2}{LSB}$, with a tail that barely reaches the $\qty{0.5}{LSB}$ threshold, confirming a yield of 99.2\%.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/monte_carlo_histogram.pdf}
+    \caption{Distribution of maximum INL at $C_{unit} = \qty{25}{fF}$, 10\,000 Monte Carlo trials, $\sigma_{C/C} = 2\%$. Yield: 99.2\%.}
+    \label{fig:monte_carlo_histogram}
+\end{figure}
+
+Figure~\ref{fig:dnl_inl_example} shows the DNL and INL of a representative single trial at $C_{unit} = \qty{25}{fF}$. The DNL remains well within $\pm 0.5\,\text{LSB}$ across all 1024 output codes,
+with no missing codes. The INL exhibits a random-walk character, as expected from independent capacitor mismatch errors accumulating across the code range, and stays within $\pm 0.5\,\text{LSB}$ throughout.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/dnl_inl_example.pdf}
+    \caption{DNL and INL for a single representative trial at $C_{unit} = \qty{25}{fF}$, $\sigma_{C/C} = 2\%$.}
+    \label{fig:dnl_inl_example}
+\end{figure}
 
 \end{document}

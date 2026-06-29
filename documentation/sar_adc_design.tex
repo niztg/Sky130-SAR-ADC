@@ -58,8 +58,8 @@ is out of scope; the project targets schematic-level verification.
         Resolution & 10 bits \\
         Sample Rate & 1 $\frac{\text{MS}}{\text{s}}$ \\ 
         ENOB & $\geq$ 9 bits \\
-        Supply Voltage, $V_{DD}$ & $\qty{1.8}{V}$ \\
-        Reference Voltage, $V_{ref}$ & $\qty{1.8}{V}$ \\
+        Supply Voltage, $V_\mathrm{DD}$ & $\qty{1.8}{V}$ \\
+        Reference Voltage, $V_\mathrm{ref}$ & $\qty{1.8}{V}$ \\
         Input Range & $0\,-\qty{1.8}{V}$ \\
         Process & SkyWater Sky130, 130nm \\
         \bottomrule
@@ -81,41 +81,39 @@ This document reports the design decisions, block-level verification, integratio
 \label{section:architecture}
 
 \subsection{Algorithm Description}
-The binary code corresponding to the input voltage $V_{in}$ is determined through a recursive algorithm with the high or low character of each bit being resolved individually. The algorithm works by treating each code
-as a sum of weighted contributions of $V_{ref}$, where bit N contributes a weight of $\frac{1}{2^{10-N}} \cdot V_{ref}$ to the overall trial voltage $V_\mathrm{analog}$.
-A bit is kept if its voltage contribution keeps $V_\mathrm{analog}$ below $V_{in}$, otherwise it is rejected. This process repeats until all 10 bits are resolved.
+The binary code corresponding to $V_\mathrm{in}$ is resolved bit-by-bit from MSB to LSB. Each bit $N$ contributes a weighted voltage $\frac{V_\mathrm{ref}}{2^{10-N}}$ to a running trial voltage $V_\mathrm{analog}$; once all bits are settled, $V_\mathrm{analog} = \frac{W}{1024} V_\mathrm{ref}$, where $W$ is the sum of the retained bit weights. At each step, the trial bit is kept if its inclusion keeps $V_\mathrm{analog} \leq V_\mathrm{in}$, and discarded otherwise. The process repeats until all 10 bits are resolved.
 
 Using an example voltage of $\qty{1.30}{V}$, the behavior of the algorithm can be traced through as follows:
 
 \begin{enumerate}
-    \item Assert bit 9 of the trial code, corresponding to an analog voltage of $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_{ref} = \qty{0.9}{V}$
-    \item Compare $V_{in} = \qty{1.3}{V}$ to $V_\mathrm{analog}$; $V_{in} > V_\mathrm{analog}$, therefore retain bit 9, assert bit 8. New trial code: 1100000000, corresponding voltage $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_{ref} + \frac{1}{2^{10-8}} \cdot V_{ref} = \qty{1.35}{V}$
-    \item Compare $V_{in}$ to $V_\mathrm{analog}$; $V_{in} < V_\mathrm{analog}$ therefore reject bit 8, assert bit 7. New code = 1010000000, corresponding voltage $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_{ref} + \frac{1}{2^{10-7}} \cdot V_{ref} = \qty{1.125}{V}$
+    \item Assert bit 9 of the trial code, corresponding to an analog voltage of $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_\mathrm{ref} = \qty{0.9}{V}$
+    \item Compare $V_\mathrm{in} = \qty{1.3}{V}$ to $V_\mathrm{analog}$; $V_\mathrm{in} > V_\mathrm{analog}$, therefore retain bit 9, assert bit 8. New trial code: 1100000000, corresponding voltage $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_\mathrm{ref} + \frac{1}{2^{10-8}} \cdot V_\mathrm{ref} = \qty{1.35}{V}$
+    \item Compare $V_\mathrm{in}$ to $V_\mathrm{analog}$; $V_\mathrm{in} < V_\mathrm{analog}$ therefore reject bit 8, assert bit 7. New code = 1010000000, corresponding voltage $V_\mathrm{analog} = \frac{1}{2^{10-9}} \cdot V_\mathrm{ref} + \frac{1}{2^{10-7}} \cdot V_\mathrm{ref} = \qty{1.125}{V}$
 \end{enumerate}
 
 This process repeats until all 10 bits are individually checked, in this case resulting in the code $1011100010 = \qty{1.297}{V}$.
 
 \subsection{Operation}
 The design is comprised of four major blocks: the bootstrapped switch, CDAC binary-weighted array, StrongARM comparator and SAR logic block, and works in two phases: sampling and conversion. 
-During the sampling phase, the bootstrapped switch connects $V_{in}$ to all 
+During the sampling phase, the bootstrapped switch connects $V_\mathrm{in}$ to all 
 bottom plates of the CDAC array simultaneously, while the top plate is reset 
-to $V_{cm} = V_{ref}\, /\,2$. This establishes a charge 
-on the top plate node of $Q = (V_{ref}/2 - V_{in}) \cdot C_{total}$. At the 
+to $V_\mathrm{cm} = V_\mathrm{ref}\, /\,2$. This establishes a charge 
+on the top plate node of $Q = (V_\mathrm{ref}/2 - V_\mathrm{in}) \cdot C_{total}$. At the 
 start of conversion, the bootstrapped switch is disconnected, leaving the top plate floating with its charge preserved
 while the bottom plate of each node is shorted to ground. The SAR 
 logic then performs a binary search from the MSB downward: each trial bit 
-steers its corresponding bottom plate to $V_{ref}$, shifting $V_{DAC}$ upward 
+steers its corresponding bottom plate to $V_\mathrm{ref}$, shifting $V_\mathrm{DAC}$ upward 
 by an amount proportional to that capacitor's weight. At the conclusion of this search, the StrongARM comparator 
-evaluates whether $V_{ref}/2$ is greater than $V_{DAC}$, equivalent to testing whether $V_{in}$ exceeds the 
+evaluates whether $V_\mathrm{ref}/2$ is greater than $V_\mathrm{DAC}$, equivalent to testing whether $V_\mathrm{in}$ exceeds the 
 analog value of the current trial code. The SAR logic retains or clears each 
 bit accordingly:
 
 \begin{enumerate}
     \item Assert trial code $1000000000$; bottom plate of $512C$ switches to 
-    $V_{ref}$, shifting $V_{DAC}$ upwards to $\frac{512}{1024} V_{ref}$.
-    \item If $V_{DAC} < V_{ref}/2$ (equivalently, $V_{in} > \frac{512}{1024} V_{ref}$), 
+    $V_\mathrm{ref}$, shifting $V_\mathrm{DAC}$ upwards to $\frac{512}{1024} V_\mathrm{ref}$.
+    \item If $V_\mathrm{DAC} < V_\mathrm{ref}/2$ (equivalently, $V_\mathrm{in} > \frac{512}{1024} V_\mathrm{ref}$), 
     retain bit 9; otherwise clear it and return that bottom plate to ground
-    \item Assert the next trial bit (bit 8; adding an upwards shift of $\frac{256}{1024} V_{ref}$ to $V_{DAC}$) and repeat in descending order until all 
+    \item Assert the next trial bit (bit 8; adding an upwards shift of $\frac{256}{1024} V_\mathrm{ref}$ to $V_\mathrm{DAC}$) and repeat in descending order until all 
     10 bits are resolved
 \end{enumerate}
 
@@ -131,52 +129,53 @@ This process is summarized by the block diagram in figure~\ref{fig:block_diagram
 % ─────────────────────────────────────────────
 \section{Block Design and Sizing}
 \label{section:block_design}
+This section covers the transistor-level design of each block in the ADC, including the bootstrapped sampling switch, the charge-redistribution DAC, the StrongARM comparator, and the SAR control logic, with particular attention to the sizing decisions that tie back to the 10-bit, 1\,MS/s specifications.
 
 % ─────────────────────────────────────────────
 \subsection{Python Behavioral Model}
 \label{subsection:behavioral_model}
 
-The minimum valid unit capacitance, $C_{unit}$, that can be used for any capacitor in the CDAC array is governed by the thermal noise floor in equation~\ref{eq:thermal_noise_floor}.
+The minimum valid unit capacitance, $C_\mathrm{unit}$, that can be used for any capacitor in the CDAC array is governed by the thermal noise floor in equation~\ref{eq:thermal_noise_floor}.
 
 \begin{equation}
-    C_{min} = \frac{kT}{V_{LSB}^2} \label{eq:thermal_noise_floor}
+    C_\mathrm{min} = \frac{kT}{V_\mathrm{LSB}^2} \label{eq:thermal_noise_floor}
 \end{equation}
 
-with $V_{LSB} = \frac{V_{ref}}{2^N}$, where $N$ is the resolution of the instrument. Substituting $k = \qty{1.38e-23}{J \cdot K}$, $T = \qty{300}{K}$, $V_{ref} = \qty{1.8}{V}$ and $N=10$,
-$C_{min} $ is found as $\qty{5.36}{\femto F}$.
+with $V_\mathrm{LSB} = \frac{V_\mathrm{ref}}{2^N}$, where $N$ is the resolution of the instrument. Substituting $k = \qty{1.38e-23}{J \cdot K}$, $T = \qty{300}{K}$, $V_\mathrm{ref} = \qty{1.8}{V}$ and $N=10$,
+$C_\mathrm{min} $ is found as $\qty{5.36}{\femto F}$.
 
-In order to determine a suitable unit capacitance, a Monte Carlo mismatch analysis was conducted. In each trial, $C_{unit}$ was swept from $\qty{5}{fF}$ to $\qty{54}{fF}$ and a binary-weighted capacitor array,
-$[512, 256, 128, ..., 2, 1, 1] \times C_{unit}$ was generated, representing the CDAC array. Each capacitor in this array was perturbed according to $\sigma_{C/C} \, / \, \sqrt{n_{cells}}$,
-where the mismatch $\sigma_{C/C}$ is 2\%, and $n_{cells} = C_{unit} \, / \, C_{min}$. Using this representation of the CDAC array, the SAR conversion algorithm was executed on $2^{16} = 65\,536$
+In order to determine a suitable unit capacitance, a Monte Carlo mismatch analysis was conducted. In each trial, $C_\mathrm{unit}$ was swept from $\qty{5}{fF}$ to $\qty{54}{fF}$ and a binary-weighted capacitor array,
+$[512, 256, 128, ..., 2, 1, 1] \times C_\mathrm{unit}$ was generated, representing the CDAC array. Each capacitor in this array was perturbed according to $\sigma_{C/C} \, / \, \sqrt{n_\mathrm{cells}}$,
+where the mismatch $\sigma_{C/C}$ is 2\%, and $n_\mathrm{cells} = C_\mathrm{unit} \, / \, C_\mathrm{min}$. Using this representation of the CDAC array, the SAR conversion algorithm was executed on $2^{16} = 65\,536$
 input voltages, 64 per binary code. For each trial, the DNL and INL were computed and the maximum INL was recorded. This process was repeated for 10\,000 trials.
 
 The yield is computed as the fraction of trials where the maximum INL is less than 0.5 LSB. As can be seen in figure~\ref{fig:yield_vs_cunit}, the yield surpasses its target of 99\%
-at approximately $\qty{24}{fF}$. Therefore, to allow for some margin, a target value of $C_{unit} = \qty{25}{fF}$ was selected, giving a total CDAC capacitance of $1024 \times \qty{25}{fF} = \qty{25.6}{pF}$.
+at approximately $\qty{24}{fF}$. Therefore, to allow for some margin, a target value of $C_\mathrm{unit} = \qty{25}{fF}$ was selected, giving a total CDAC capacitance of $1024 \times \qty{25}{fF} = \qty{25.6}{pF}$.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/yield_vs_cunit.pdf}
-    \caption{Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma_{C/C} = 2\%$.}
+    \caption{Yield vs.\ $C_\mathrm{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma_{C/C} = 2\%$.}
     \label{fig:yield_vs_cunit}
 \end{figure}
 
-To validate the selected $C_{unit} = \qty{25}{fF}$, a further 10\,000-trial Monte Carlo simulation was run at this fixed value. Figure~\ref{fig:monte_carlo_histogram} shows the resulting distribution
+To validate the selected $C_\mathrm{unit} = \qty{25}{fF}$, a further 10\,000-trial Monte Carlo simulation was run at this fixed value. Figure~\ref{fig:monte_carlo_histogram} shows the resulting distribution
 of maximum INL across all trials. The distribution is centred near $\qty{0.2}{LSB}$, with a tail that barely reaches the $\qty{0.5}{LSB}$ threshold, confirming a yield of 99.2\%.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/monte_carlo_histogram.pdf}
-    \caption{Distribution of maximum INL at $C_{unit} = \qty{25}{fF}$, 10\,000 Monte Carlo trials, $\sigma_{C/C} = 2\%$. Yield: 99.2\%.}
+    \caption{Distribution of maximum INL at $C_\mathrm{unit} = \qty{25}{fF}$, 10\,000 Monte Carlo trials, $\sigma_{C/C} = 2\%$. Yield: 99.2\%.}
     \label{fig:monte_carlo_histogram}
 \end{figure}
 
-Figure~\ref{fig:dnl_inl_example} shows the DNL and INL of a representative single trial at $C_{unit} = \qty{25}{fF}$. The DNL remains well within $\pm 0.5\,\text{LSB}$ across all 1024 output codes,
+Figure~\ref{fig:dnl_inl_example} shows the DNL and INL of a representative single trial at $C_\mathrm{unit} = \qty{25}{fF}$. The DNL remains well within $\pm 0.5\,\text{LSB}$ across all 1024 output codes,
 with no missing codes. The INL exhibits a random-walk character, as expected from independent capacitor mismatch errors accumulating across the code range, and stays within $\pm 0.5\,\text{LSB}$ throughout.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth]{figures/dnl_inl_example.pdf}
-    \caption{DNL and INL for a single representative trial at $C_{unit} = \qty{25}{fF}$, $\sigma_{C/C} = 2\%$.}
+    \caption{DNL and INL for a single representative trial at $C_\mathrm{unit} = \qty{25}{fF}$, $\sigma_{C/C} = 2\%$.}
     \label{fig:dnl_inl_example}
 \end{figure}
 
@@ -184,14 +183,14 @@ with no missing codes. The INL exhibits a random-walk character, as expected fro
 \subsection{CDAC}
 \label{subsection:cdac}
 
-The CDAC is a binary-weighted array of capacitors, $[512, 256, 128, ..., 2, 1, 1] \times C_{unit}$. Including the termination capacitor of capacitance 
-$C_{unit}$, it spans 11 capacitors with a total capacitance of $1024 \cdot C_{unit} = \qty{25.6}{pF}$. The top plate of each capacitor is tied to the common node $V_{DAC}$,
+The CDAC is a binary-weighted array of capacitors, $[512, 256, 128, ..., 2, 1, 1] \times C_\mathrm{unit}$. Including the termination capacitor of capacitance 
+$C_\mathrm{unit}$, it spans 11 capacitors with a total capacitance of $1024 \cdot C_\mathrm{unit} = \qty{25.6}{pF}$. The top plate of each capacitor is tied to the common node $V_\mathrm{DAC}$,
 while each capacitor has a unique bottom plate node. 
 During operation, the CDAC undergoes two stages:
 
 \begin{enumerate}
-    \item Sampling: the bottom plate of each capacitor is driven to $V_{in}$, while $V_{DAC}$ is driven to $V_{cm} = V_{ref} \, / \, 2$. This locks in a charge of $Q = 1024 \cdot C_{unit} \cdot (V_{ref} \, / \, 2 - V_{in})$ onto the CDAC.
-    \item Conversion: $V_{DAC}$ is disconnected from its source and becomes floating. The SAR logic block drives the bottom plate of each capacitor to either $V_{ref}$ or ground, depending on whether the corresponding bit in the code under trial is high or low. For example, if the code under trial is $1010000000$, then the bottom plates of $C_9 = 512 C_{unit}$ and $C_7 = 128 C_{unit}$ are sent to $V_{ref}$, with the remaining bottom plates being shorted to ground. At the end of conversion, $V_{DAC} = \frac{W}{1024} V_{ref} + V_{ref} \, / \, 2 - V_{in}$, where $W$ is the sum of the weights of each capacitor whose bottom plate is at $V = V_{ref}$. Note that during conversion, the bottom plate of the termination capacitor is always shorted to ground.
+    \item Sampling: the bottom plate of each capacitor is driven to $V_\mathrm{in}$, while $V_\mathrm{DAC}$ is driven to $V_\mathrm{cm} = V_\mathrm{ref} \, / \, 2$. This locks in a charge of $Q = 1024 \cdot C_\mathrm{unit} \cdot (V_\mathrm{ref} \, / \, 2 - V_\mathrm{in})$ onto the CDAC.
+    \item Conversion: $V_\mathrm{DAC}$ is disconnected from its source and becomes floating. The SAR logic block drives the bottom plate of each capacitor to either $V_\mathrm{ref}$ or ground, depending on whether the corresponding bit in the code under trial is high or low. For example, if the code under trial is $1010000000$, then the bottom plates of $C_9 = 512 C_\mathrm{unit}$ and $C_7 = 128 C_\mathrm{unit}$ are sent to $V_\mathrm{ref}$, with the remaining bottom plates being shorted to ground. At the end of conversion, $V_\mathrm{DAC} = \frac{W}{1024} V_\mathrm{ref} + V_\mathrm{ref} \, / \, 2 - V_\mathrm{in}$, where $W$ is the sum of the weights of each capacitor whose bottom plate is at $V = V_\mathrm{ref}$. Note that during conversion, the bottom plate of the termination capacitor is always shorted to ground.
 \end{enumerate}
 
 For each analog voltage under test, sampling occurs once at the start of the procedure, while conversion happens once per bit, progressing from the MSB to the LSB. 
@@ -205,12 +204,12 @@ The transistor-level logic that controls the CDAC's behavior is shown in figure~
 \node[tgate, scale=0.8] (tgtop) at (2.5, 8.0) {};
 \node[above, font=\footnotesize] at (tgtop.north) {$\phi_s$};
 \node[below, font=\footnotesize] at (tgtop.south) {$\bar{\phi}_s$};
-\node[left,  font=\footnotesize] at (tgtop.in) {$V_{cm}$};
+\node[left,  font=\footnotesize] at (tgtop.in) {$V_\mathrm{cm}$};
  
 % vdac node
 \coordinate (vdac) at (4.5, 8.0);
 \node[circ] at (vdac) {};
-\node[above, font=\footnotesize] at (vdac) {$V_{DAC}$};
+\node[above, font=\footnotesize] at (vdac) {$V_\mathrm{DAC}$};
 \draw (tgtop.out) -- (vdac);
  
 % vdac down wire + cap
@@ -222,7 +221,7 @@ The transistor-level logic that controls the CDAC's behavior is shown in figure~
  
 % ── PMOS ref switch (above bpN, right side) ──────────────────
 \node[pmos, scale=0.8, xscale=-1] (pref) at (7.0, 6.5) {};
-\draw (pref.source) -- ++(0, 0.5) node[above, font=\footnotesize] {$V_{ref}$};
+\draw (pref.source) -- ++(0, 0.5) node[above, font=\footnotesize] {$V_\mathrm{ref}$};
 \draw (pref.drain) -- (7.0, 5.2) -- (bpN);
 \draw (pref.gate) -- ++(0, 0) node[right, font=\footnotesize] {$\overline{\mathit{cdac\_sw}}_N$};
 
@@ -249,14 +248,14 @@ The transistor-level logic that controls the CDAC's behavior is shown in figure~
 \label{fig:cdac_cell}
 \end{figure}
 
-The diagram in figure~\ref{fig:cdac_cell} applies to all capacitors in the CDAC except for the termination capacitor. Note that for compactness, the transmission gate responsible for charging $V_{DAC}$ to
-$V_{cm}$ during sampling is included in figure~\ref{fig:cdac_cell}; however, because $V_{DAC}$ is shared by all capacitors, the entire CDAC only uses one such transmission gate rather than one per cell. 
-The signal $cdac\_sw_N$ represents the high/low value of $N^{th}$ trial bit in the code under test. The capacitor $C_{N}$ is responsible for the voltage contribution of this bit to $V_{DAC}$, and has a capacitance
-value of $C_N = 2^N \cdot C_{unit}$.
+The diagram in figure~\ref{fig:cdac_cell} applies to all capacitors in the CDAC except for the termination capacitor. Note that for compactness, the transmission gate responsible for charging $V_\mathrm{DAC}$ to
+$V_\mathrm{cm}$ during sampling is included in figure~\ref{fig:cdac_cell}; however, because $V_\mathrm{DAC}$ is shared by all capacitors, the entire CDAC only uses one such transmission gate rather than one per cell. 
+The signal $cdac\_sw_N$ represents the high/low value of $N^{th}$ trial bit in the code under test. The capacitor $C_{N}$ is responsible for the voltage contribution of this bit to $V_\mathrm{DAC}$, and has a capacitance
+value of $C_N = 2^N \cdot C_\mathrm{unit}$.
 
-During sampling, $\phi_s$ is high, meaning that both transmission gates are active and $V_{DAC}$ gets sent to $V_{cm}$ while each $V_{bp_N}$ is sent to $V_{in}$. 
-Thereafter, $\phi_s$ turns off and both transmission gates are switched off, leaving $V_{DAC}$ floating and initiating the conversion stage. If $cdac\_sw_N$ is high, then its complement $\overline{\mathit{cdac\_sw}}_N$ is low and the PMOS of the
-pull-up network turns on, shorting $bp_N$ to $V_{ref}$. Otherwise, the top NMOS in the pull-down network is activated and $bp_N$ is routed to ground. The additional NMOS gated by $\bar{\phi}_s$ in the pull-down
+During sampling, $\phi_s$ is high, meaning that both transmission gates are active and $V_\mathrm{DAC}$ gets sent to $V_\mathrm{cm}$ while each $V_{bp_N}$ is sent to $V_\mathrm{in}$. 
+Thereafter, $\phi_s$ turns off and both transmission gates are switched off, leaving $V_\mathrm{DAC}$ floating and initiating the conversion stage. If $cdac\_sw_N$ is high, then its complement $\overline{\mathit{cdac\_sw}}_N$ is low and the PMOS of the
+pull-up network turns on, shorting $bp_N$ to $V_\mathrm{ref}$. Otherwise, the top NMOS in the pull-down network is activated and $bp_N$ is routed to ground. The additional NMOS gated by $\bar{\phi}_s$ in the pull-down
 network is introduced due to contention; if it were not there, then the pull-down network would provide a path to ground during sampling while $cdac\_sw_N$ is low. Since $\phi_s$ is guaranteed to be high during sampling and low during conversion, this NMOS ensures that the pull-down network is never active during sampling but can still be active during conversion.
 
 Note that due to its repetitive nature, no schematic for the CDAC array was designed by hand, with $\texttt{cdac.spice}$ instead being written directly.
@@ -266,29 +265,29 @@ Note that due to its repetitive nature, no schematic for the CDAC array was desi
 \label{subsection:bootstrapped_switch}
 
 \subsubsection{Motivation}
-Bootstrapping is necessary in order to avoid bandwidth modulation and harmonic distortion when charging the bottom plates of the CDAC up to $V_{in}$. When an NMOS is used to charge up the CDAC,
-the channel resistance $R_{on}$ of the FET and the capacitance of the CDAC create a low-pass filter with cutoff frequency given by equation~\ref{eq:cutoff_frequency}.
+Bootstrapping is necessary in order to avoid bandwidth modulation and harmonic distortion when charging the bottom plates of the CDAC up to $V_\mathrm{in}$. When an NMOS is used to charge up the CDAC,
+the channel resistance $R_\mathrm{on}$ of the FET and the capacitance of the CDAC create a low-pass filter with cutoff frequency given by equation~\ref{eq:cutoff_frequency}.
 
 \begin{equation}
-    f_n = \frac{1}{2\pi R_{on} C_{DAC}} \label{eq:cutoff_frequency}
+    f_n = \frac{1}{2\pi R_\mathrm{on} C_\mathrm{DAC}} \label{eq:cutoff_frequency}
 \end{equation}
 
-The channel resistance $R_{on}$ of an NMOS is given by equation~\ref{eq:nmos_resistance}.
+The channel resistance $R_\mathrm{on}$ of an NMOS is given by equation~\ref{eq:nmos_resistance}.
 
 \begin{equation}
-    R_{on} = \frac{1}{\mu_n C_{ox} \frac{W}{L} (V_{GS} - V_{th,n})} \label{eq:nmos_resistance}
+    R_\mathrm{on} = \frac{1}{\mu_n C_{ox} \frac{W}{L} (V_{GS} - V_{th,n})} \label{eq:nmos_resistance}
 \end{equation}
 
-If the FET is gated by $V_{DD}$, then $V_{GS} = V_{DD} - V_{in}$, meaning that if $V_{in}$ changes, the bandwidth of the low-pass filter varies, attenuating signals inconsistently.
-This unevenness results in harmonic distortion, lowering the effective resolution of the instrument. The bootstrapped switch combats this by lifting the gate voltage of the FET to $V_{DD} + V_{in}$, therefore 
-fixing $V_{GS}$ at $V_{DD}$, thus fixing $R_{on}$ and the corresponding cutoff frequency of the transfer function.
+If the FET is gated by $V_\mathrm{DD}$, then $V_{GS} = V_\mathrm{DD} - V_\mathrm{in}$, meaning that if $V_\mathrm{in}$ changes, the bandwidth of the low-pass filter varies, attenuating signals inconsistently.
+This unevenness results in harmonic distortion, lowering the effective resolution of the instrument. The bootstrapped switch combats this by lifting the gate voltage of the FET to $V_\mathrm{DD} + V_\mathrm{in}$, therefore 
+fixing $V_{GS}$ at $V_\mathrm{DD}$, thus fixing $R_\mathrm{on}$ and the corresponding cutoff frequency of the transfer function.
 
 \subsubsection{Topology and Operation}
 The topology of the bootstrapped switch is shown in figure~\ref{fig:bootstrap}. It operates in two stages.
 
 \begin{enumerate}
-    \item When $\phi_s$ is low, the PMOS $Q_2$ is off while the NMOS $Q_5$ is on, therefore wiring the node X to ground. As such, the NMOS's $Q_4$ and $Q_0$ are off, while the PMOS $Q_1$ and the NMOS $Q_3$ are on. Therefore, there is a direct pathway from $V_{DD}$ to ground through $C_{boot}$, which charges up to $V_{DD}$.
-\item When $\phi_s$ turns on, transistors $Q_3$ and $Q_5$ turn off while transistor $Q_2$ turns on, allowing $V_X = V_{DD} + V_{in}$. This causes transistor $Q_1$ to turn off and transistors $Q_4$ and $Q_0$ to turn on, thus providing a pathway for $V_{in}$ to flow into $V_{in,s}$ with the gate of $Q_0$ fixed at $V_X$.
+    \item When $\phi_s$ is low, the PMOS $Q_2$ is off while the NMOS $Q_5$ is on, therefore wiring the node X to ground. As such, the NMOS's $Q_4$ and $Q_0$ are off, while the PMOS $Q_1$ and the NMOS $Q_3$ are on. Therefore, there is a direct pathway from $V_\mathrm{DD}$ to ground through $C_\mathrm{boot}$, which charges up to $V_\mathrm{DD}$.
+\item When $\phi_s$ turns on, transistors $Q_3$ and $Q_5$ turn off while transistor $Q_2$ turns on, allowing $V_X = V_\mathrm{DD} + V_\mathrm{in}$. This causes transistor $Q_1$ to turn off and transistors $Q_4$ and $Q_0$ to turn on, thus providing a pathway for $V_\mathrm{in}$ to flow into $V_{in,s}$ with the gate of $Q_0$ fixed at $V_X$.
 \end{enumerate}
 
 \begin{figure}[h]
@@ -303,12 +302,12 @@ The topology of the bootstrapped switch is shown in figure~\ref{fig:bootstrap}. 
   \draw (Q0.gate) -- (4,3) -- (4,4);
   \draw (Q0.source) -- ++(0,-0.7);
   \filldraw[white] (Q0.source) ++(0,-0.7) circle (2pt);
-  \draw (Q0.source) ++(0,-0.7) circle (2pt) node[below=2pt] {$V_{in}$};
+  \draw (Q0.source) ++(0,-0.7) circle (2pt) node[below=2pt] {$V_\mathrm{in}$};
   \node[below] at (4,1.5) {$Q_0$};
 
   % --- Q1: PMOS drain=VDD, gate=X, source=net3 ---
   \node[pmos, rotate=-90] (Q1) at (0,6) {};
-  \draw (Q1.drain) -- (-1,6) -- (-1,6.5) node[above] {$V_{DD}$};
+  \draw (Q1.drain) -- (-1,6) -- (-1,6.5) node[above] {$V_\mathrm{DD}$};
   \draw[->, >=latex] (-1,6) -- (-1,6.5);
   \draw (Q1.gate)  -- (0,7) node[above] {$X$};
   \node[below] at (0,5.5) {$Q_1$};
@@ -335,7 +334,7 @@ The topology of the bootstrapped switch is shown in figure~\ref{fig:bootstrap}. 
   \node[below] at (2,1.5) {$Q_4$};
 
 % C_boot: top plate at Q1.source, bottom plate at Q3/Q4 source level
-  \draw (Q1.source) to[C, l_=$C_{boot}$, *-*] (Q3.source);
+  \draw (Q1.source) to[C, l_=$C_\mathrm{boot}$, *-*] (Q3.source);
   \filldraw (Q1.source) circle (1.5pt);
   \filldraw (Q3.source) circle (1.5pt);
 
@@ -357,56 +356,56 @@ The topology of the bootstrapped switch is shown in figure~\ref{fig:bootstrap}. 
 
 \end{circuitikz}
 \caption{Bootstrapped sampling switch. $Q_0$ is the main sampling device;
-$C_{boot}$ is precharged to $V_{DD}$ during $\bar{\phi_s}$ and
-bootstraps the gate of $Q_0$ to $V_{in}+V_{DD}$ during $\phi_s$.}
+$C_\mathrm{boot}$ is precharged to $V_\mathrm{DD}$ during $\bar{\phi_s}$ and
+bootstraps the gate of $Q_0$ to $V_\mathrm{in}+V_\mathrm{DD}$ during $\phi_s$.}
 \label{fig:bootstrap}
 \end{figure}
 
 \subsubsection{Parameter Derivations}
 Together with the CDAC, the bootstrapped switch enforces the three-phase behavior of the signal $\phi_s$. 
-During phase 1, $\phi_s$ must be low so as to allow $C_{boot}$ to charge. Then, $\phi_s$ must become high to turn the switch on and charge up the CDAC.
+During phase 1, $\phi_s$ must be low so as to allow $C_\mathrm{boot}$ to charge. Then, $\phi_s$ must become high to turn the switch on and charge up the CDAC.
 Finally, $\phi_s$ permanently turns off, disconnecting the CDAC from the bootstrapped switch which has accomplished its purpose by fixing charge onto the CDAC.
 
 In totality, this means that $\phi_s$ must be a pulse which must start at a delay. The length of this pulse determines the sizing of the transistors and the value
-of $C_{boot}$. This length, in turn, is determined by the sample rate design target, 1 megasample per second.
+of $C_\mathrm{boot}$. This length, in turn, is determined by the sample rate design target, 1 megasample per second.
 
 A rate of 1 megasample per second implies a period of $\qty{1}{\micro s}$. Using a typical 70-30 split, with 30\% of the period allotted to sampling, the width of the pulse
 is $\qty{300}{ns}$. During the width of this pulse, the CDAC must be charged up enough to render an error due to rounding impossible. Practically, this means that the error
-of the CDAC's voltage must be less than half of an LSB. The error of the CDAC's voltage, defined as the difference between $V_{in}$ and $V_{DAC}$, is given by equation~\ref{eq:cdac_error}.
+of the CDAC's voltage must be less than half of an LSB. The error of the CDAC's voltage, defined as the difference between $V_\mathrm{in}$ and $V_\mathrm{DAC}$, is given by equation~\ref{eq:cdac_error}.
 
 \begin{equation}
-    \text{Error} = V_{in} \cdot e^{-t \, /  \, R_{on} C_{DAC}} \label{eq:cdac_error}
+    \text{Error} = V_\mathrm{in} \cdot e^{-t \, /  \, R_\mathrm{on} C_\mathrm{DAC}} \label{eq:cdac_error}
 \end{equation}
 
-Requiring this error to be less than the value of half of one LSB, $\text{Error} < \frac{V_{ref}}{2^{N+1}}$, and assuming a worst-case scenario of $V_{in} = V_{ref}$, an expression for $R_{on}$ can be derived.
+Requiring this error to be less than the value of half of one LSB, $\text{Error} < \frac{V_\mathrm{ref}}{2^{N+1}}$, and assuming a worst-case scenario of $V_\mathrm{in} = V_\mathrm{ref}$, an expression for $R_\mathrm{on}$ can be derived.
 
 \begin{equation}
-    R_{on} \le \frac{t}{C_{DAC} \cdot 2^{N+1} \cdot \ln 2} \label{eq:r_on}
+    R_\mathrm{on} \le \frac{t}{C_\mathrm{DAC} \cdot 2^{N+1} \cdot \ln 2} \label{eq:r_on}
 \end{equation}
 
-Substituting $t = \qty{300}{ns}$, $C_{DAC} = \qty{25.6}{pF}$ and $N = 10$ into equation~\ref{eq:r_on}, $R_{on}$ is found as $\qty{1.54}{\kilo \Omega}$. Applying the channel resistance equation of equation~\ref{eq:nmos_resistance},
-with $V_{GS} = V_{DD} = \qty{1.8}{V}$ due to bootstrapping, $\mu_n C_{ox} = \qty{270}{\frac{\micro A}{V^2}}$ as set by Sky130, and $l = \qty{150}{nm}$ (the minimum allowable channel length in Sky130),
+Substituting $t = \qty{300}{ns}$, $C_\mathrm{DAC} = \qty{25.6}{pF}$ and $N = 10$ into equation~\ref{eq:r_on}, $R_\mathrm{on}$ is found as $\qty{1.54}{\kilo \Omega}$. Applying the channel resistance equation of equation~\ref{eq:nmos_resistance},
+with $V_{GS} = V_\mathrm{DD} = \qty{1.8}{V}$ due to bootstrapping, $\mu_n C_{ox} = \qty{270}{\frac{\micro A}{V^2}}$ as set by Sky130, and $l = \qty{150}{nm}$ (the minimum allowable channel length in Sky130),
 the minimum value for $w$ is found as $\qty{273.8}{nm}$. Allowing for an ample margin, the transistor $Q_0$ was chosen to have a width of $\qty{1}{\micro m}$. Auxiliary transistors $Q_1$ and $Q_{3-5}$ were sized to match $Q_0$'s width layout for convenience,
 while $Q_2$ was sized conservatively with a width double that of $Q_0$. All transistors have an identical length of $\qty{150}{nm}$.
 
 
-Using these design parameters, a value of $C_{boot}$ was selected that sufficiently minimizes droop. 
-The voltage droop on $C_{boot}$ due to charge sharing with the parasitic gate capacitance of $Q_0$, $C_{gate}$, is given by equation~\ref{eq:droop}.
+Using these design parameters, a value of $C_\mathrm{boot}$ was selected that sufficiently minimizes droop. 
+The voltage droop on $C_\mathrm{boot}$ due to charge sharing with the parasitic gate capacitance of $Q_0$, $C_\mathrm{gate}$, is given by equation~\ref{eq:droop}.
 
 \begin{equation}
-    \frac{\Delta V}{V_{DD}} = \frac{C_{gate}}{C_{gate} + C_{boot}} \label{eq:droop}
+    \frac{\Delta V}{V_\mathrm{DD}} = \frac{C_\mathrm{gate}}{C_\mathrm{gate} + C_\mathrm{boot}} \label{eq:droop}
 \end{equation}
 
 Setting this quantity to be strictly less than 0.01,
 
 \begin{gather}
-    \frac{C_{gate}}{C_{gate} + C_{boot}} < 0.01 \nonumber \\
-    100 \cdot C_{gate} < C_{boot} + C_{gate} \nonumber \\
-    \boxed{C_{boot} > 99 \cdot C_{gate}} \label{eq:c_boot}
+    \frac{C_\mathrm{gate}}{C_\mathrm{gate} + C_\mathrm{boot}} < 0.01 \nonumber \\
+    100 \cdot C_\mathrm{gate} < C_\mathrm{boot} + C_\mathrm{gate} \nonumber \\
+    \boxed{C_\mathrm{boot} > 99 \cdot C_\mathrm{gate}} \label{eq:c_boot}
 \end{gather}
 
-The gate capacitance, $C_{gate}$, is given by $C_{gate} = wl \cdot C_{ox}$. Substituting $w = \qty{1}{\micro m}$, $l = \qty{150}{nm}$ and $C_{ox} = \qty{17}{\frac{fF}{\micro m^2}}$ as set by Sky130,
-$C_{boot} > \qty{252.45}{fF}$. To significantly exceed this mark, $C_{boot}$ was chosen as $\qty{500}{fF}$. The final design choices are summarized in table~\ref{tab:sizing}.
+The gate capacitance, $C_\mathrm{gate}$, is given by $C_\mathrm{gate} = wl \cdot C_{ox}$. Substituting $w = \qty{1}{\micro m}$, $l = \qty{150}{nm}$ and $C_{ox} = \qty{17}{\frac{fF}{\micro m^2}}$ as set by Sky130,
+$C_\mathrm{boot} > \qty{252.45}{fF}$. To significantly exceed this mark, $C_\mathrm{boot}$ was chosen as $\qty{500}{fF}$. The final design choices are summarized in table~\ref{tab:sizing}.
 
 \begin{table}[H]
     \centering
@@ -418,7 +417,7 @@ $C_{boot} > \qty{252.45}{fF}$. To significantly exceed this mark, $C_{boot}$ was
         \midrule
         Width of $Q_0$ & $\qty{1}{\micro m}$ \\
         Channel length of $Q_0$ & $\qty{150}{nm}$ \\ 
-        $C_{boot}$ & $\qty{500}{fF}$ \\
+        $C_\mathrm{boot}$ & $\qty{500}{fF}$ \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -443,13 +442,13 @@ The StrongARM comparator is the block which performs the bitwise retain or rejec
 
 %% M1 — left input NMOS
 \node[nmos, anchor=source] (M1) at (-1.3,3.542) {};
-\draw (M1.gate) -- ++(-0.8,0) node[left]{$V_{in1}$};
+\draw (M1.gate) -- ++(-0.8,0) node[left]{$V_\mathrm{in1}$};
 \node[right=3pt] at (M1.east) {$M_1$};
 \draw (M1.source) -- (0,3.542);
 
 %% M2 — right input NMOS
 \node[nmos, xscale=-1, anchor=source] (M2) at (1.3,3.542) {};
-\draw (M2.gate) -- ++(0.8,0) node[right]{$V_{in2}$};
+\draw (M2.gate) -- ++(0.8,0) node[right]{$V_\mathrm{in2}$};
 \node[left=17pt] at (M2.west) {$M_2$};
 \draw (M2.source) -- (0,3.542);
 
@@ -533,22 +532,22 @@ The StrongARM comparator is the block which performs the bitwise retain or rejec
 \label{fig:strongarm_comparator}
 \end{figure}
 
-When the clock is low, the pull-up network is active and the nodes P, Q, X and Y are pulled up to $V_{DD}$. When the clock turns on, 
-the pull-up network is disabled while the NMOS pull-down network comprised of M1, M2 and M7 is enabled, offering a pathway for the voltages at P and Q to discharge to ground. If $V_{in1}$ exceeds $V_{in2}$, the gate-source voltage and hence the rate of discharge at P is
-greater than that of Q, and if the reverse is true ($V_{in2} > V_{in1}$), then Q discharges faster than P. Suppose that $V_{in1} > V_{in2}$.
+When the clock is low, the pull-up network is active and the nodes P, Q, X and Y are pulled up to $V_\mathrm{DD}$. When the clock turns on, 
+the pull-up network is disabled while the NMOS pull-down network comprised of M1, M2 and M7 is enabled, offering a pathway for the voltages at P and Q to discharge to ground. If $V_\mathrm{in1}$ exceeds $V_\mathrm{in2}$, the gate-source voltage and hence the rate of discharge at P is
+greater than that of Q, and if the reverse is true ($V_\mathrm{in2} > V_\mathrm{in1}$), then Q discharges faster than P. Suppose that $V_\mathrm{in1} > V_\mathrm{in2}$.
 Then, P discharges faster than Q, meaning that the NMOS M3 turns on before M4, offering a discharge pathway to ground for the voltage at X. 
 Due to the cross-coupling between M3, M4, M5 and M6, X decreasing means that the gate voltage at M4 decreases, slowing the rate of discharge at Y.
-Eventually, $V_X$ is low enough to enable M6 while disabling M4, hence pulling Y up to $V_{DD}$. Therefore, if $V_{in1} > V_{in2}$, $V_Y$ settles at $V_{DD}$
-at steady state, while $V_X$ settles at 0. Following identical logic, in the reverse case where $V_{in2} > V_{in1}$, $V_{Y}$ settles at 0 while $V_{X}$ settles at $V_{DD}$.
+Eventually, $V_X$ is low enough to enable M6 while disabling M4, hence pulling Y up to $V_\mathrm{DD}$. Therefore, if $V_\mathrm{in1} > V_\mathrm{in2}$, $V_Y$ settles at $V_\mathrm{DD}$
+at steady state, while $V_X$ settles at 0. Following identical logic, in the reverse case where $V_\mathrm{in2} > V_\mathrm{in1}$, $V_{Y}$ settles at 0 while $V_{X}$ settles at $V_\mathrm{DD}$.
 
-During operation, $V_{in1} = V_{ref} \, / \, 2$ while $V_{in2} = V_{DAC}$. As noted in subsection~\ref{subsection:cdac}, $V_{DAC} = \frac{W}{1024} V_{ref} + V_{ref} \, / \, 2 - V_{in}$ at the end of conversion. The condition for Y to be high is:
+During operation, $V_\mathrm{in1} = V_\mathrm{ref} \, / \, 2$ while $V_\mathrm{in2} = V_\mathrm{DAC}$. As noted in subsection~\ref{subsection:cdac}, $V_\mathrm{DAC} = \frac{W}{1024} V_\mathrm{ref} + V_\mathrm{ref} \, / \, 2 - V_\mathrm{in}$ at the end of conversion. The condition for Y to be high is:
 
 \begin{gather}
-    V_{in1} > V_{in2} \nonumber \\
-    V_{ref} \, / \, 2 > V_{DAC} \nonumber \\
-    V_{ref} \, / \, 2 > \frac{W}{1024} V_{ref} + V_{ref} \, / \, 2 - V_{in} \nonumber \\
-    0 > \frac{W}{1024} V_{ref} - V_{in} \nonumber \\
-    \boxed{V_{in} > \frac{W}{1024} V_{ref}} \label{eq:comp_eqn}
+    V_\mathrm{in1} > V_\mathrm{in2} \nonumber \\
+    V_\mathrm{ref} \, / \, 2 > V_\mathrm{DAC} \nonumber \\
+    V_\mathrm{ref} \, / \, 2 > \frac{W}{1024} V_\mathrm{ref} + V_\mathrm{ref} \, / \, 2 - V_\mathrm{in} \nonumber \\
+    0 > \frac{W}{1024} V_\mathrm{ref} - V_\mathrm{in} \nonumber \\
+    \boxed{V_\mathrm{in} > \frac{W}{1024} V_\mathrm{ref}} \label{eq:comp_eqn}
 \end{gather}
 
 Therefore, when Y is high, the trial bit is asserted according to the SAR logic of section~\ref{section:architecture}. X and Y will always be complementary. The comparator outputs X and Y are fed to the R and S inputs respectively of an SR-latch. The Q output of the latch, which tracks Y, is fed into the SAR logic block.
@@ -559,9 +558,9 @@ Therefore, when Y is high, the trial bit is asserted according to the SAR logic 
 
 \subsubsection{Operation}
 
-When \texttt{start} is asserted, signalling the start of a new conversion, the SAR logic clears its \texttt{result} and \texttt{cdac\_sw} registers, resets the bit index to 9, raises the internal \texttt{active} flag, and asserts \texttt{cdac\_sw[9]}, steering the MSB capacitor to $V_{ref}$.
+When \texttt{start} is asserted, signalling the start of a new conversion, the SAR logic clears its \texttt{result} and \texttt{cdac\_sw} registers, resets the bit index to 9, raises the internal \texttt{active} flag, and asserts \texttt{cdac\_sw[9]}, steering the MSB capacitor to $V_\mathrm{ref}$.
 
-On each subsequent rising clock edge, the logic reads \texttt{comp\_in} — which tracks the comparator output $Y$ — and records the decision in \texttt{result[bit\_idx]}. The current trial bit in \texttt{cdac\_sw} is kept if \texttt{comp\_in} is high, or cleared if low. The next bit is then asserted in \texttt{cdac\_sw}, updating $V_{DAC}$ for the following comparison as seen in figure~\ref{fig:cdac_cell}, and the bit index is decremented. This continues until bit 0 is evaluated, at which point \texttt{done} is asserted, \texttt{active} is cleared, and the block idles until the next \texttt{start} pulse.
+On each subsequent rising clock edge, the logic reads \texttt{comp\_in} — which tracks the comparator output $Y$ — and records the decision in \texttt{result[bit\_idx]}. The current trial bit in \texttt{cdac\_sw} is kept if \texttt{comp\_in} is high, or cleared if low. The next bit is then asserted in \texttt{cdac\_sw}, updating $V_\mathrm{DAC}$ for the following comparison as seen in figure~\ref{fig:cdac_cell}, and the bit index is decremented. This continues until bit 0 is evaluated, at which point \texttt{done} is asserted, \texttt{active} is cleared, and the block idles until the next \texttt{start} pulse.
 
 \subsubsection{Implementation}
 The SAR logic was written in Verilog RTL and verified behaviourally using Icarus Verilog. It was then synthesised to Sky130 high-density standard cells using Yosys, producing a gate-level SPICE netlist via Yosys's \texttt{write\_spice} command.
@@ -615,9 +614,7 @@ was understood, and it masked the real circuit behaviour across several
 sessions. The fix initialises \texttt{vdac} to its reset value
 ($V_\mathrm{cm}=0.9$\,V) and every CDAC bottom plate plus the sampled-input
 node to $V_\mathrm{in}$, matching the state the sample phase will drive
-them to anyway. The general lesson --- any full-loop transient with a
-mid-cycle clock state needs explicit initial conditions --- is now applied
-up front rather than rediscovered.
+them to anyway. 
 
 \paragraph{Done-verified readout.} Rather than assuming \texttt{done}
 asserts at a fixed time and reading the result there, the testbench
@@ -634,7 +631,7 @@ precomputed ideal trajectory.
 \label{subsection:isolation}
 
 The first full-loop run at $V_\mathrm{in}=1.2$\,V returned a code roughly
-77\,LSB below the expected value --- a gross error, not a rounding effect.
+77\,LSB below the expected value, an error which could not be attributed to rounding.
 (The reference was later corrected to the true algorithmic target of 682,
 making the figure $-76$\,LSB; the conclusion that something was seriously
 wrong is unchanged.)
@@ -667,7 +664,7 @@ pin down.
 
 \paragraph{Symptom.} The bootstrapped switch undersampled by
 $\sim$89\,mV at $V_\mathrm{in}=1.5$\,V, with negligible error at
-$V_\mathrm{in}=1.2$\,V --- a strongly input-dependent loss that grew toward
+$V_\mathrm{in}=1.2$\,V, a strongly input-dependent loss that grew toward
 the top of the input range.
 
 \paragraph{Wrong hypothesis first.} The initial theory was a channel
@@ -682,8 +679,7 @@ the hypothesis.
 \paragraph{Falsified by charge balance.} The hypothesis did not survive a
 charge-balance check. Integrating that drain current over its conduction
 window accounts for only $\sim$1\,fC, whereas the charge actually missing
-from the boost capacitor --- measured directly from the precharged-versus-
-settled voltage across $C_\mathrm{boot}$ --- was $\sim$394\,fC. The
+from the boost capacitor was $\sim$394\,fC. The
 measured channel current was real but roughly 400$\times$ too small to be
 the dominant mechanism. Chasing that two-order-of-magnitude gap, rather
 than accepting a plausible-looking number, is what found the actual bug.
@@ -691,44 +687,45 @@ than accepting a plausible-looking number, is what found the actual bug.
 \paragraph{Root cause: forward-biased PMOS body diode.} \texttt{XQ1} and
 \texttt{XQ2} had their bulk pins tied to fixed $V_\mathrm{DD}$ --- the
 correct default for ordinary PMOS, but wrong here because these two
-devices' own source/drain nodes (\texttt{net1}, \texttt{net3}) are
+devices' own source/drain nodes (referred to in the SPICE as \texttt{net1}, also known as X, and \texttt{net3}) are
 deliberately boosted above $V_\mathrm{DD}$ during the sample phase. Once a
 boosted node exceeds $V_\mathrm{DD}$ by more than a diode drop
 ($\sim$0.7\,V), the source/drain-to-bulk junction stops being reverse
 biased and conducts as a forward diode --- not a small leak but a hard
 voltage clamp. The signature is unmistakable: \texttt{net3} settles at
 $\sim$2.50\,V, almost exactly $V_\mathrm{DD}$ plus one diode drop. Adding
-current-sense sources on the bulk pins themselves --- a path the
+current-sense sources on the bulk pins themselves, a path the
 drain-side sense source could not see, since bulk connects straight to the
-$V_\mathrm{DD}$ rail externally --- measured $\sim$382\,fC/cycle at
+$V_\mathrm{DD}$ rail externally, measured $\sim$382\,fC/cycle at
 $V_\mathrm{in}=1.5$\,V, accounting for $\sim$97\% of the deficit.
 
 The numbers are self-consistent. The boost node should reach
 $V_\mathrm{in}+V_\mathrm{DD}=3.3$\,V at $V_\mathrm{in}=1.5$\,V but clamps
 at 2.5\,V, a 0.8\,V shortfall. On the 500\,fF boost capacitor that
 corresponds to $0.8\,\mathrm{V}\times 500\,\mathrm{fF}=400$\,fC of charge
-that never makes it onto the node --- within measurement error of the
+that never makes it onto the node, within measurement error of the
 394\,fC found missing.
 
-% =====================================================================
-% TODO: FIGURE -- original vs. fixed bulk connection.
-% CircuiTikz schematic showing (left) XQ1/XQ2 bulk tied to fixed VDD with
-% the forward-biased source/drain-to-bulk junction and the charge-bleed
-% path into the VDD rail highlighted; (right) bulk re-routed to the
-% floating nwell_switch bias node. Annotate net1/net3 boosting above VDD
-% and net3 clamping at ~2.5 V in the broken case.
-% This is the single clearest diagram the document needs.
-% \begin{figure}[H] ... \caption{...}\label{fig:nwell_fix} \end{figure}
-% =====================================================================
-
-\paragraph{Fix.} A new \texttt{nwell\_switch} subcircuit generates a
+\paragraph{Fix.} A new \texttt{nwell\_switch} (figure~\ref{fig:nwell_fix}) subcircuit generates a
 floating bias node that always tracks whichever is higher,
-$V_\mathrm{DD}$ or \texttt{net1} --- $V_\mathrm{DD}$ during precharge,
+$V_\mathrm{DD}$ or \texttt{net1}: $V_\mathrm{DD}$ during precharge,
 \texttt{net1} during boost. The bulk pins of \texttt{XQ1} and \texttt{XQ2}
 route through this node instead of fixed $V_\mathrm{DD}$, so the junction
 never forward-biases. The subcircuit's own two internal devices have their
 bulks tied to its output node, so the fix does not reintroduce the same
 problem on itself.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/bootstrap_fix_waveform.png}
+    \caption{Bootstrapped switch output at $V_\mathrm{in}=1.5$\,V before and
+    after the n-well fix. Pre-fix (red): the forward-biased body diode clamps
+    the boost node, limiting \texttt{VOUT} to $\approx 1.40$\,V with a
+    $\sim$450\,ns settling tail into the second sample window. Post-fix
+    (blue): \texttt{VOUT} reaches $V_\mathrm{in}$ within the first sample
+    window. Shaded regions indicate the sampling phase.}
+    \label{fig:bootstrap_fix_waveform}
+\end{figure}
 
 \paragraph{Result.} In the isolated switch testbench the sampling error
 dropped from $\sim$89\,mV to 0.94\,\textmu V, and the bulk-junction current
@@ -736,6 +733,101 @@ collapsed from $-382$\,fC to $+0.15$\,fC per cycle. Re-running the full
 ADC gave $-6$, $-11$, and $-54$\,LSB at $V_\mathrm{in}=0.6$, $1.2$, and
 $1.5$\,V respectively --- the dominant front-end loss removed, leaving a
 smaller residual at high input that is the subject of the next subsection.
+
+\begin{figure}[H]
+\centering
+\begin{circuitikz}[american, scale=0.95, transform shape]
+
+% –––– left: broken case –––––
+
+
+\draw (1.5, 3) node[pmos] (XQ1) {};
+ 
+\draw (XQ1.gate) -- ++(-1.0, 0) node[left] {\small X};
+\draw (XQ1.drain)  -- ++(0, -0.8) node[below] {\small net3};
+ 
+% shared VDD rail at y=5.2
+\draw (XQ1.source) -- ++(0, 0) -- (1.5, 5.2);
+ 
+% bulk stub right then up to same VDD rail via diode
+\draw (XQ1.bulk) -- ++(0.7, 0) coordinate (bulkR);
+\draw (bulkR) -- ++(0, 0.55)
+    to[diode] ++(0, 0.9)
+    -- (2.2, 5.2);
+ 
+% VDD bar
+\draw[thick] (0.8, 5.2) -- (2.5, 5.2) node[right] {\small $V_\mathrm{DD}$};
+ 
+% drain wire down to box
+\draw (XQ1.drain) -- ++(0, -0.5) coordinate (drainbot);
+
+\node[font=\small\itshape] at (1.5, 0.6) {(a)};
+
+% ── divider ─────────────────────────────────────────────────────
+\draw[gray, dashed] (4.2, 0.3) -- (4.2, 5.6);
+
+
+% –––– right: fixed case –––––
+
+\begin{scope}
+
+% ── XQ1f ─────────────────────────────────────────────────────────
+\draw (7.0, 3) node[pmos] (XQ1f) {};
+\draw (XQ1f.source) -- ++(0, 0.6) node[vcc, scale=0.8] {};
+\draw (XQ1f.source) -- ++(0, 1) node[above] {\small $V_\mathrm{DD}$};
+\draw (XQ1f.gate)   -- ++(-1.0, 0) node[left]  {\small X};
+\draw (XQ1f.drain)  -- ++(0, -0.8) node[below] {\small net3};
+\draw (XQ1f.bulk)   -- ++(4.8, 0) coordinate (net4bus);
+
+% ── XWA: D=net4, G=X, S=VDD, B=net4 ─────────────────────────────
+\draw (11.5, 4.8) node[pmos] (QA) {};
+\draw (QA.source) -- (11.5, 6.0);
+\draw (QA.gate)   -- ++(-0.9, 0) node[left] {\small X};
+\draw (QA.drain)  -- ++(0, -0.5) coordinate (drA);
+\node[font=\scriptsize, right=2pt] at ($(QA.gate) + (0.5, 0)$) {XWA};
+
+% ── XWB: D=net4, G=VDD, S=X, B=net4 ─────────────────────────────
+\draw (14.0, 4.8) node[pmos, xscale=-1] (QB) {};
+\draw (QB.source) -- ++(0, 0.5) node[above] {\small X};
+\draw (QB.gate)   -- ++(0.9, 0) node[right] {\small $V_\mathrm{DD}$};
+\draw (QB.drain)  -- ++(0, -0.5) coordinate (drB);
+\node[font=\scriptsize, left=2pt] at ($(QB.gate) + (-0.5, 0)$) {XWB};
+
+\draw[->] (11.5, 5.8) -- (11.5, 6.2) node[above] {\small $V_\mathrm{DD}$};
+
+% drain bus
+\draw (drA) -- (drB);
+\filldraw (drA) circle (1.5pt);
+\filldraw (drB) circle (1.5pt);
+
+% net4bus from XQ1f bulk drops to drain bus y then joins drA
+\draw (net4bus) -- (net4bus |- drA) -- (drA);
+\filldraw (net4bus |- drA) circle (1.5pt);
+
+% net4 label
+\coordinate (drMid) at ($(drA)!0.5!(drB)$);
+\node[font=\small, below=3pt] at ($(drMid) + (0, -0.4)$) {\small net4};
+
+% dashed box around XWA + XWB
+\draw[dashed, rounded corners=4pt] (9.0, 1.8) rectangle (17.0, 7.0);
+\node[font=\small, anchor=south] at (13.0, 7.0) {\texttt{nwell\_switch}};
+
+\node[font=\small\itshape] at (8.5, 0.5) {(b)};
+
+\end{scope}
+
+\end{circuitikz}
+\caption{Bulk connection for the bootstrapped-switch PMOS XQ1.
+\textbf{(a)}~Original design: bulk tied to the fixed VDD rail.
+During the hold phase X and net3 boost above VDD; the source/bulk
+p-n junction forward-biases and bleeds charge into the supply rail,
+clamping net3 to $\approx 2.5\,$V and collapsing the bootstrap voltage.
+\textbf{(b)}~Fix: bulk re-routed to the floating \texttt{nwell\_switch}
+bias node (net4). XXWA and XXWB are cross-coupled PMOS source-followers
+that drive net4 to $\max(\mathrm{VDD},\,X)$, maintaining
+reverse bias on the junction throughout the clock cycle. An identical fix is applied to the bulk of XQ2.}
+\label{fig:nwell_fix}
+\end{figure}
 
 % ------------------------------------------------------------
 \subsection{Residual error: top-plate reset feedthrough}
@@ -750,29 +842,75 @@ reset value just as the conversion begins.
 Isolated testbenches characterised the kick as a function of input
 voltage:
 
-\begin{center}
-\begin{tabular}{cc}
-\toprule
-$V_\mathrm{in}$ (V) & Kick on \texttt{vdac} \\
-\midrule
-0.3 & $\sim$0.6\,mV \\
-0.6 & $\sim$4.8\,mV \\
-0.9 & $\sim$9\,mV \\
-1.2 & $\sim$15\,mV \\
-1.5 & $\sim$122--160\,mV (with a $\sim$450--500\,ns settling tail) \\
-\bottomrule
-\end{tabular}
-\end{center}
+\begin{table}[H]
+    \centering
+    \caption{Residual error on $V_\mathrm{DAC}$ as a function of input voltage}
+    \label{tab:residual_error}
+    \begin{tabular}{cc}
+        \toprule
+        $V_\mathrm{in}$ (V) & Kick on \texttt{vdac} \\
+        \midrule
+        0.3 & $\sim$0.6\,mV \\
+        0.6 & $\sim$4.8\,mV \\
+        0.9 & $\sim$9\,mV \\
+        1.2 & $\sim$15\,mV \\
+        1.5 & $\sim$122--160\,mV (with a $\sim$450--500\,ns settling tail) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 The kick grows nonlinearly with $V_\mathrm{in}$ and develops a long
 settling tail near the top of the range. Because the error is strongly
 input-dependent rather than a fixed offset, it cannot be removed by a
-single static digital calibration constant. Known mitigations --- a dummy
+single static digital calibration constant. Known mitigations (a dummy
 top-plate switch for charge cancellation, or a separate reset phase that
-lets \texttt{vdac} settle before the comparator looks at it --- were
+lets \texttt{vdac} settle before the comparator looks at it) were
 identified but not implemented, since the converter already meets its
 functional goals and physical layout is the next priority rather than
 squeezing the last few LSB of high-input linearity.
 
+% ------------------------------------------------------------
+\section{Static Performance Characterisation}
+\label{section:static}
+
+\subsection{DC Sweep Methodology}
+
+Static linearity was characterised by sweeping a DC input voltage from 0 to 1.8\,V and recording the 10-bit output code at each point. The sweep was implemented in \texttt{sweep\_adc.py}, which spawns a separate ngspice process per input voltage rather than running a monolithic multi-point simulation, which would have exhausted ngspice's internal memory.
+
+Input voltages were stepped in 10\,mV increments, giving a theoretical 181 points over 0--1.8\,V. Of these, 141 points returned valid \texttt{done}-asserted conversions, with the other 40 failing to complete before the self-imposted 180-second time limit. The operating range was auto-detected as 0.50--1.39\,V by \texttt{find\_operating\_range.py}, which identifies the contiguous span of codes whose conversion error stays within $\pm$35\,mV of the ideal; points outside this range reflect the bootstrapped switch failing to fully charge the CDAC at low input voltages, and CDAC top-plate feedthrough saturating the output at high voltages. Fig.~\ref{fig:operating_range} shows the full-range error plot used for this detection.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/operating_range_plot.png}
+    \caption{ADC conversion error over 0--1.8\,V. The shaded region (0.50--1.39\,V) is the auto-detected operating range, bounded by a $\pm$35\,mV threshold. The monotone ramp below 0.5\,V reflects bootstrapped switch underdriving; the steep negative error above 1.39\,V is top-plate feedthrough from \texttt{XTOP\_n} growing nonlinearly as $V_\mathrm{in}$ approaches $V_\mathrm{DD}$.}
+    \label{fig:operating_range}
+\end{figure}
+
+\subsection{INL Results}
+
+INL was computed by fitting a best-fit line to the transfer function over the valid operating range and measuring the deviation of each code transition from the ideal. The raw and smoothed INL curves are shown in Fig.~\ref{fig:inl}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/inl_plot.png}
+    \caption{Raw and smoothed INL over the valid input range (0.50--1.39\,V). The diagonal line visible in the raw curve near 0.79--1.01\,V is an interpolation artefact caused by missing simulation points in that window, not a real feature of the transfer function. The $+$5\,LSB peak in the smoothed curve near 0.75\,V is caused by top-plate reset feedthrough from \texttt{XTOP\_n}, discussed further in Section~\ref{section:discussion}.}
+    \label{fig:inl}
+\end{figure}
+
+The raw INL has a peak of $\pm$13\,LSB and an RMS of 9.21\,LSB. The dominant contribution to this figure is a measurement grid artefact: a 10\,mV step corresponds to approximately 5.6 output codes at 10-bit resolution over 0.89\,V of valid range, so the transfer function is sampled far below Nyquist for code-level detail. Each transition between grid points is assigned to the nearest sampled code, introducing a staircase quantisation error that manifests as high-frequency oscillation in the INL curve and inflates the RMS well beyond the true device nonlinearity. Applying a 7-point moving average suppresses this artefact and gives a smoothed INL of $\pm$5\,LSB peak and 1.90\,LSB RMS.
+
+\subsection{Static ENOB}
+
+A static ENOB figure was derived from the INL by treating INL error as noise. The signal power of a full-scale ramp over a 10-bit ADC is $(2^{10})^2/8$ in units of LSB$^2$; the noise power is taken as $\sigma_{\mathrm{INL}}^2 + 1/12$, where the $1/12$ term accounts for ideal quantisation noise. Using the smoothed INL RMS of 1.90\,LSB:
+
+\begin{equation}
+    \mathrm{SNDR} = 10\log_{10}\!\left(\frac{(2^{10})^2/8}{\sigma_{\mathrm{INL}}^2 + 1/12}\right) = 45.50\,\mathrm{dB}
+\end{equation}
+
+\begin{equation}
+    \mathrm{ENOB} = \frac{\mathrm{SNDR} - 1.76}{6.02} = 7.27\,\mathrm{bits}
+\end{equation}
+
+These results are summarised in the title bar of Fig.~\ref{fig:inl}. This falls short of the 9-bit target. The static ENOB figure represents a lower bound on true dynamic performance in one respect (it does not account for sampling jitter or bandwidth), and an upper bound in another (the top-plate feedthrough kick at inputs above roughly 1.3\,V, which contributes the $\pm$13\,LSB raw peak, is not present in a static DC measurement of a real signal). A sine-wave FFT test would give a more direct ENOB figure under realistic operating conditions and has not yet been performed due to processing power constraints.
 
 \end{document}

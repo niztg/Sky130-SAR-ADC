@@ -9,39 +9,68 @@
 \newlabel{tab:specs}{{1}{2}{Design Specifications}{table.caption.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Architecture Overview}{3}{section.2}\protected@file@percent }
 \newlabel{section:architecture}{{2}{3}{Architecture Overview}{section.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Block diagram of SAR ADC}}{3}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:block_diagram}{{1}{3}{Block diagram of SAR ADC}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Algorithm Description}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Operation}{3}{subsection.2.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Block diagram of SAR ADC}}{4}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:block_diagram}{{1}{4}{Block diagram of SAR ADC}{figure.caption.3}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Block Design and Sizing}{4}{section.3}\protected@file@percent }
 \newlabel{section:block_design}{{3}{4}{Block Design and Sizing}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Python Behavioral Model}{4}{subsection.3.1}\protected@file@percent }
 \newlabel{subsection:behavioral_model}{{3.1}{4}{Python Behavioral Model}{subsection.3.1}{}}
 \newlabel{eq:thermal_noise_floor}{{1}{4}{Python Behavioral Model}{equation.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma _{C/C} = 2\%$.}}{4}{figure.caption.4}\protected@file@percent }
-\newlabel{fig:yield_vs_cunit}{{2}{4}{Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma _{C/C} = 2\%$}{figure.caption.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of maximum INL at $C_{unit} = \qty {25}{fF}$, 10\,000 Monte Carlo trials, $\sigma _{C/C} = 2\%$. Yield: 99.2\%.}}{5}{figure.caption.5}\protected@file@percent }
-\newlabel{fig:monte_carlo_histogram}{{3}{5}{Distribution of maximum INL at $C_{unit} = \qty {25}{fF}$, 10\,000 Monte Carlo trials, $\sigma _{C/C} = 2\%$. Yield: 99.2\%}{figure.caption.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces DNL and INL for a single representative trial at $C_{unit} = \qty {25}{fF}$, $\sigma _{C/C} = 2\%$.}}{5}{figure.caption.6}\protected@file@percent }
-\newlabel{fig:dnl_inl_example}{{4}{5}{DNL and INL for a single representative trial at $C_{unit} = \qty {25}{fF}$, $\sigma _{C/C} = 2\%$}{figure.caption.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}CDAC}{6}{subsection.3.2}\protected@file@percent }
-\newlabel{subsection:cdac}{{3.2}{6}{CDAC}{subsection.3.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Transistor-level design of one CDAC cell}}{6}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:cdac_cell}{{5}{6}{Transistor-level design of one CDAC cell}{figure.caption.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Bootstrapped Switch}{7}{subsection.3.3}\protected@file@percent }
-\newlabel{subsection:bootstrapped_switch}{{3.3}{7}{Bootstrapped Switch}{subsection.3.3}{}}
-\newlabel{eq:cutoff_frequency}{{2}{7}{Bootstrapped Switch}{equation.2}{}}
-\newlabel{eq:nmos_resistance}{{3}{7}{Bootstrapped Switch}{equation.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Bootstrapped sampling switch. $Q_0$ is the main sampling device; $C_{boot}$ is precharged to $V_{DD}$ during $\bar  {\phi _s}$ and bootstraps the gate of $Q_0$ to $V_{in}+V_{DD}$ during $\phi _s$.}}{8}{figure.caption.8}\protected@file@percent }
-\newlabel{fig:bootstrap}{{6}{8}{Bootstrapped sampling switch. $Q_0$ is the main sampling device; $C_{boot}$ is precharged to $V_{DD}$ during $\bar {\phi _s}$ and bootstraps the gate of $Q_0$ to $V_{in}+V_{DD}$ during $\phi _s$}{figure.caption.8}{}}
-\newlabel{eq:cdac_error}{{4}{8}{Bootstrapped Switch}{equation.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma _{C/C} = 2\%$.}}{5}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:yield_vs_cunit}{{2}{5}{Yield vs.\ $C_{unit}$ sweep across 10\,000 Monte Carlo trials at $\sigma _{C/C} = 2\%$}{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Distribution of maximum INL at $C_{unit} = \qty {25}{fF}$, 10\,000 Monte Carlo trials, $\sigma _{C/C} = 2\%$. Yield: 99.2\%.}}{6}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:monte_carlo_histogram}{{3}{6}{Distribution of maximum INL at $C_{unit} = \qty {25}{fF}$, 10\,000 Monte Carlo trials, $\sigma _{C/C} = 2\%$. Yield: 99.2\%}{figure.caption.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces DNL and INL for a single representative trial at $C_{unit} = \qty {25}{fF}$, $\sigma _{C/C} = 2\%$.}}{6}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:dnl_inl_example}{{4}{6}{DNL and INL for a single representative trial at $C_{unit} = \qty {25}{fF}$, $\sigma _{C/C} = 2\%$}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}CDAC}{7}{subsection.3.2}\protected@file@percent }
+\newlabel{subsection:cdac}{{3.2}{7}{CDAC}{subsection.3.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Transistor-level design of one CDAC cell}}{7}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:cdac_cell}{{5}{7}{Transistor-level design of one CDAC cell}{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Bootstrapped Switch}{8}{subsection.3.3}\protected@file@percent }
+\newlabel{subsection:bootstrapped_switch}{{3.3}{8}{Bootstrapped Switch}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}Motivation}{8}{subsubsection.3.3.1}\protected@file@percent }
+\newlabel{eq:cutoff_frequency}{{2}{8}{Motivation}{equation.2}{}}
+\newlabel{eq:nmos_resistance}{{3}{8}{Motivation}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}Topology and Operation}{9}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Bootstrapped sampling switch. $Q_0$ is the main sampling device; $C_{boot}$ is precharged to $V_{DD}$ during $\bar  {\phi _s}$ and bootstraps the gate of $Q_0$ to $V_{in}+V_{DD}$ during $\phi _s$.}}{9}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:bootstrap}{{6}{9}{Bootstrapped sampling switch. $Q_0$ is the main sampling device; $C_{boot}$ is precharged to $V_{DD}$ during $\bar {\phi _s}$ and bootstraps the gate of $Q_0$ to $V_{in}+V_{DD}$ during $\phi _s$}{figure.caption.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}Parameter Derivations}{9}{subsubsection.3.3.3}\protected@file@percent }
+\newlabel{eq:cdac_error}{{4}{10}{Parameter Derivations}{equation.4}{}}
+\newlabel{eq:r_on}{{5}{10}{Parameter Derivations}{equation.5}{}}
+\newlabel{eq:droop}{{6}{10}{Parameter Derivations}{equation.6}{}}
+\newlabel{eq:c_boot}{{7}{10}{Parameter Derivations}{equation.7}{}}
 \citation{razavi2015strongarm}
 \citation{razavi2015strongarm}
-\newlabel{eq:droop}{{6}{9}{Bootstrapped Switch}{equation.6}{}}
-\newlabel{eq:c_boot}{{7}{9}{Bootstrapped Switch}{equation.7}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Sizing Choices}}{9}{table.caption.9}\protected@file@percent }
-\newlabel{tab:sizing}{{2}{9}{Sizing Choices}{table.caption.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}StrongARM Comparator}{9}{subsection.3.4}\protected@file@percent }
-\newlabel{subsection:strongarm_comparator}{{3.4}{9}{StrongARM Comparator}{subsection.3.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces StrongARM latch comparator (Figure 1(b) from Razavi \cite  {razavi2015strongarm}). M1--M2 form the input differential pair, M3--M4 the cross-coupled NMOS latch, M5--M6 the cross-coupled PMOS latch, M7 the tail switch, and S1--S4 the precharge switches. Nodes P and Q are the intermediate amplification nodes; X and Y are the differential outputs.}}{10}{figure.caption.10}\protected@file@percent }
-\newlabel{fig:strongarm_comparator}{{7}{10}{StrongARM latch comparator (Figure 1(b) from Razavi \cite {razavi2015strongarm}). M1--M2 form the input differential pair, M3--M4 the cross-coupled NMOS latch, M5--M6 the cross-coupled PMOS latch, M7 the tail switch, and S1--S4 the precharge switches. Nodes P and Q are the intermediate amplification nodes; X and Y are the differential outputs}{figure.caption.10}{}}
-\newlabel{eq:comp_eqn}{{8}{11}{StrongARM Comparator}{equation.8}{}}
-\gdef \@abspage@last{11}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Sizing Choices}}{11}{table.caption.9}\protected@file@percent }
+\newlabel{tab:sizing}{{2}{11}{Sizing Choices}{table.caption.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}StrongARM Comparator}{11}{subsection.3.4}\protected@file@percent }
+\newlabel{subsection:strongarm_comparator}{{3.4}{11}{StrongARM Comparator}{subsection.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces StrongARM latch comparator (Figure 1(b) from Razavi \cite  {razavi2015strongarm}). M1--M2 form the input differential pair, M3--M4 the cross-coupled NMOS latch, M5--M6 the cross-coupled PMOS latch, M7 the tail switch, and S1--S4 the precharge switches. Nodes P and Q are the intermediate amplification nodes; X and Y are the differential outputs.}}{11}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:strongarm_comparator}{{7}{11}{StrongARM latch comparator (Figure 1(b) from Razavi \cite {razavi2015strongarm}). M1--M2 form the input differential pair, M3--M4 the cross-coupled NMOS latch, M5--M6 the cross-coupled PMOS latch, M7 the tail switch, and S1--S4 the precharge switches. Nodes P and Q are the intermediate amplification nodes; X and Y are the differential outputs}{figure.caption.10}{}}
+\newlabel{eq:comp_eqn}{{8}{12}{StrongARM Comparator}{equation.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}SAR Logic}{12}{subsection.3.5}\protected@file@percent }
+\newlabel{subsection:sar_logic}{{3.5}{12}{SAR Logic}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}Operation}{12}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}Implementation}{12}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Integration \& Debugging}{13}{section.4}\protected@file@percent }
+\newlabel{section:integration}{{4}{13}{Integration \& Debugging}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Full-loop testbench}{13}{subsection.4.1}\protected@file@percent }
+\newlabel{subsection:tb}{{4.1}{13}{Full-loop testbench}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Clocking.}{13}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Cold-start initial conditions.}{13}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Done-verified readout.}{14}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Isolation-first debugging methodology}{14}{subsection.4.2}\protected@file@percent }
+\newlabel{subsection:isolation}{{4.2}{14}{Isolation-first debugging methodology}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}The n-well bootstrap bug}{14}{subsection.4.3}\protected@file@percent }
+\newlabel{subsection:nwell}{{4.3}{14}{The n-well bootstrap bug}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {paragraph}{Symptom.}{14}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Wrong hypothesis first.}{15}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Falsified by charge balance.}{15}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Root cause: forward-biased PMOS body diode.}{15}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Fix.}{15}{section*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Result.}{15}{section*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Residual error: top-plate reset feedthrough}{16}{subsection.4.4}\protected@file@percent }
+\newlabel{subsection:feedthrough}{{4.4}{16}{Residual error: top-plate reset feedthrough}{subsection.4.4}{}}
+\gdef \@abspage@last{16}

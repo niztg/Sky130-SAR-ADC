@@ -364,6 +364,11 @@ INPUT ./figures/bootstrap_fix_waveform.png
 INPUT ./figures/bootstrap_fix_waveform.png
 INPUT ./figures/bootstrap_fix_waveform.png
 INPUT /usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmtt10.tfm
+INPUT ./figures/transfer_function.pdf
+INPUT ./figures/transfer_function.pdf
+INPUT ./figures/transfer_function.pdf
+INPUT ./figures/transfer_function.pdf
+INPUT ./figures/transfer_function.pdf
 INPUT ./figures/operating_range_plot.png
 INPUT ./figures/operating_range_plot.png
 INPUT ./figures/operating_range_plot.png

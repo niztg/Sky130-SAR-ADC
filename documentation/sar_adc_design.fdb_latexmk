@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1782790192.61907 "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" "sar_adc_design.pdf" "sar_adc_design" 1782790194.74427 0
-  "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" 1782790190.33231 61358 8cb46f9b00b3b14f3c33eb6db7679ceb ""
+["pdflatex"] 1782802679.15479 "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" "sar_adc_design.pdf" "sar_adc_design" 1782802681.25211 0
+  "/Users/nizansari/Desktop/Projects/SAR ADC/documentation/sar_adc_design.tex" 1782802678.85005 68850 a51aceafe952d632aaeaaff78bed5fa2 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/jknappen/ec/tcrm0600.tfm" 1136768653 1536 12e8c510d3e158fdd0e9a42e75118bd9 ""
@@ -212,11 +212,12 @@
   "figures/inl_plot.png" 1782281412.93273 120644 71da9be2901db135fa61282257dcbe49 ""
   "figures/monte_carlo_histogram.pdf" 1782371822.62295 22906 de578e27c5e1a860bb8760ee73d4e89b ""
   "figures/operating_range_plot.png" 1782280765.01127 76220 679899c04b8a87448a0be0b0a5cdb057 ""
+  "figures/transfer_function.pdf" 1782798833.38151 19408 4aea265c254dad9fa3a827e8053605b4 ""
   "figures/yield_vs_cunit.pdf" 1782371806.85243 19007 c5e95281e5f9ca88a36a8e4238b9f3eb ""
-  "sar_adc_design.aux" 1782790194.63262 15876 921587cc9df53d4d8d6d61b3cca8cc0f "pdflatex"
-  "sar_adc_design.out" 1782790194.63402 4998 8073f7016687411e9c222d355a7b4fdc "pdflatex"
-  "sar_adc_design.tex" 1782790190.33231 61358 8cb46f9b00b3b14f3c33eb6db7679ceb ""
-  "sar_adc_design.toc" 1782790194.63424 3290 eb5611ce9f90fe017c544fcfe59e93f5 "pdflatex"
+  "sar_adc_design.aux" 1782802681.1296 16768 287af4d076ac880430f9f1c15678a4cc "pdflatex"
+  "sar_adc_design.out" 1782802681.13128 5227 e9c42d3446a3bb5e01aeac8d9cc61da1 "pdflatex"
+  "sar_adc_design.tex" 1782802678.85005 68850 a51aceafe952d632aaeaaff78bed5fa2 ""
+  "sar_adc_design.toc" 1782802681.13165 3392 aebc32761af492f055f0059aa9525a9d "pdflatex"
   (generated)
   "sar_adc_design.aux"
   "sar_adc_design.log"

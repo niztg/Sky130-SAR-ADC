@@ -103,6 +103,36 @@ def yield_vs_capacitance_plot(C_unit, yield_data):
     plt.grid()
     plt.show()
 
+def plot_measured_transfer_function(sweep_file, V_ref, N, operating_range, figures_dir):
+    """
+    Plots the measured ADC transfer function (output code vs. input voltage)
+    from a saved ngspice DC sweep, against the ideal straight-line transfer
+    function. sweep_file is a two-column whitespace-separated text file:
+    V_in (volts), output code.
+    """
+    data = np.loadtxt(sweep_file)
+    vin, code = data[:, 0], data[:, 1]
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot([0, V_ref], [0, 2**N - 1], color='gray', linestyle='--',
+            linewidth=1.0, label='Ideal transfer function')
+    ax.plot(vin, code, 'o', markersize=3, color='steelblue',
+            label='Measured (ngspice sweep)')
+    ax.axvspan(operating_range[0], operating_range[1], color='green', alpha=0.08,
+               label=f'Operating range ({operating_range[0]:.2f}--{operating_range[1]:.2f} V)')
+    ax.set_xlabel('$V_\\mathrm{in}$ (V)')
+    ax.set_ylabel('Output code')
+    ax.set_title('ADC Transfer Function, 10 mV DC Sweep')
+    ax.legend(fontsize=8, loc='upper left')
+    ax.grid(True, alpha=0.3)
+    ax.set_xlim(0, V_ref)
+    ax.set_ylim(0, 2**N - 1)
+    fig.tight_layout()
+    fig.savefig(os.path.join(figures_dir, 'transfer_function.pdf'), dpi=300)
+    fig.savefig(os.path.join(figures_dir, 'transfer_function.png'), dpi=300)
+    plt.close(fig)
+    print(f"Saved transfer_function ({len(vin)} points)")
+
 FIGURES_DIR = "."
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -182,6 +212,16 @@ fig.savefig(os.path.join(FIGURES_DIR, 'dnl_inl_example.pdf'), dpi=300)
 fig.savefig(os.path.join(FIGURES_DIR, 'dnl_inl_example.png'), dpi=300)
 plt.close(fig)
 print("Saved dnl_inl_example")
+
+# ── Figure 4: Measured transfer function (code vs. V_in, from ngspice sweep) ─
+print("Plotting measured transfer function...")
+plot_measured_transfer_function(
+    sweep_file='sweep_results.txt',
+    V_ref=V_ref,
+    N=N,
+    operating_range=(0.50, 1.39),
+    figures_dir=FIGURES_DIR,
+)
 
 print(f"\nAll figures saved to {FIGURES_DIR}")
 print(f"C_min = {C_min*1e15:.2f} fF")

@@ -1,33 +1,41 @@
-\contentsline {section}{\numberline {1}Introduction and Specifications}{2}{section.1}%
-\contentsline {section}{\numberline {2}Architecture Overview}{3}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Algorithm Description}{3}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Operation}{3}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Block Design and Sizing}{4}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Python Behavioral Model}{4}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}CDAC}{7}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Bootstrapped Switch}{8}{subsection.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.1}Motivation}{8}{subsubsection.3.3.1}%
-\contentsline {subsubsection}{\numberline {3.3.2}Topology and Operation}{9}{subsubsection.3.3.2}%
-\contentsline {subsubsection}{\numberline {3.3.3}Parameter Derivations}{9}{subsubsection.3.3.3}%
-\contentsline {subsection}{\numberline {3.4}StrongARM Comparator}{11}{subsection.3.4}%
-\contentsline {subsection}{\numberline {3.5}SAR Logic}{12}{subsection.3.5}%
-\contentsline {subsubsection}{\numberline {3.5.1}Operation}{12}{subsubsection.3.5.1}%
-\contentsline {subsubsection}{\numberline {3.5.2}Implementation}{12}{subsubsection.3.5.2}%
-\contentsline {section}{\numberline {4}Integration \& Debugging}{13}{section.4}%
-\contentsline {subsection}{\numberline {4.1}Full-loop testbench}{13}{subsection.4.1}%
-\contentsline {paragraph}{Clocking.}{13}{section*.11}%
-\contentsline {paragraph}{Cold-start initial conditions.}{13}{section*.12}%
-\contentsline {paragraph}{Done-verified readout.}{14}{section*.13}%
-\contentsline {subsection}{\numberline {4.2}Isolation-first debugging methodology}{14}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}The n-well bootstrap bug}{14}{subsection.4.3}%
-\contentsline {paragraph}{Symptom.}{14}{section*.14}%
-\contentsline {paragraph}{Wrong hypothesis first.}{14}{section*.15}%
-\contentsline {paragraph}{Falsified by charge balance.}{15}{section*.16}%
-\contentsline {paragraph}{Root cause: forward-biased PMOS body diode.}{15}{section*.17}%
-\contentsline {paragraph}{Fix.}{15}{section*.18}%
-\contentsline {paragraph}{Result.}{16}{section*.20}%
-\contentsline {subsection}{\numberline {4.4}Residual error: top-plate reset feedthrough}{17}{subsection.4.4}%
-\contentsline {section}{\numberline {5}Static Performance Characterisation}{17}{section.5}%
-\contentsline {subsection}{\numberline {5.1}DC Sweep Methodology}{17}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}INL Results}{18}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Static ENOB}{19}{subsection.5.3}%
+\contentsline {section}{\numberline {1}Introduction and Specifications}{3}{section.1}%
+\contentsline {section}{\numberline {2}Architecture Overview}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Algorithm Description}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Operation}{4}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Block Design and Sizing}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Python Behavioral Model}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}CDAC}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Bootstrapped Switch}{9}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Motivation}{9}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Topology and Operation}{10}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}Parameter Derivations}{10}{subsubsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.4}StrongARM Comparator}{12}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}SAR Logic}{13}{subsection.3.5}%
+\contentsline {subsubsection}{\numberline {3.5.1}Operation}{13}{subsubsection.3.5.1}%
+\contentsline {subsubsection}{\numberline {3.5.2}Implementation}{13}{subsubsection.3.5.2}%
+\contentsline {section}{\numberline {4}Integration \& Debugging}{14}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Full-loop testbench}{14}{subsection.4.1}%
+\contentsline {paragraph}{Clocking.}{14}{section*.11}%
+\contentsline {paragraph}{Cold-start initial conditions.}{14}{section*.12}%
+\contentsline {paragraph}{Done-verified readout.}{15}{section*.13}%
+\contentsline {subsection}{\numberline {4.2}Isolation-first debugging methodology}{15}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}The n-well bootstrap bug}{15}{subsection.4.3}%
+\contentsline {paragraph}{Symptom.}{15}{section*.14}%
+\contentsline {paragraph}{Wrong hypothesis first.}{15}{section*.15}%
+\contentsline {paragraph}{Falsified by charge balance.}{16}{section*.16}%
+\contentsline {paragraph}{Root cause: forward-biased PMOS body diode.}{16}{section*.17}%
+\contentsline {paragraph}{Fix.}{16}{section*.18}%
+\contentsline {paragraph}{Result.}{17}{section*.20}%
+\contentsline {subsection}{\numberline {4.4}Residual error: top-plate reset feedthrough}{18}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Static Performance Characterisation}{18}{section.5}%
+\contentsline {subsection}{\numberline {5.1}DC Sweep Methodology}{18}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}INL Results}{19}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Static ENOB}{20}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Discussion}{20}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Performance Against Specification}{20}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Operating Range}{21}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Mitigation Paths}{21}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Physical Layout}{21}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Conclusions}{21}{section.7}%
+\contentsline {section}{References}{22}{section.7}%
+\contentsline {section}{\numberline {A}Source Code and Reproducibility}{22}{appendix.A}%
